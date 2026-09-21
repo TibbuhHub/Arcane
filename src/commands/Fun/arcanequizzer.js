@@ -190,15 +190,20 @@ export default {
                         const member = await interaction.guild.members.fetch(userId).catch(function() { return null; });
                         const userMention = member ? member.user.toString() : String.fromCharCode(60) + '@' + userId + String.fromCharCode(62);
 
-                        let rankPrefix = (index + 1) + '.';
-                        if (index === 0) rankPrefix = '🥇';
-                        else if (index === 1) rankPrefix = '🥈';
-                        else if (index === 2) rankPrefix = '🥉';
-                        else rankPrefix = '**' + (index + 1) + '.**';
+                        let prefix = "1.";
+                        if (index === 0) {
+                            prefix = "🥇";
+                        } else if (index === 1) {
+                            prefix = "🥈";
+                        } else if (index === 2) {
+                            prefix = "🥉";
+                        } else {
+                            prefix = (index + 1) + ".";
+                        }
 
-                        return rankPrefix + ' ' + userMention + ' — **' + score + ' pts**';
+                        return prefix + " " + userMention + " — **" + score + " pts**";
                     } catch (e) {
-                        return '**' + (index + 1) + '.** Error loading user ' + userId + ' — **' + score + ' pts**';
+                        return "**" + (index + 1) + ".** " + String.fromCharCode(60) + "@" + userId + String.fromCharCode(62) + " — **" + score + " pts**";
                     }
                 })
             );
