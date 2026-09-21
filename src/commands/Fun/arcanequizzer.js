@@ -163,7 +163,7 @@ export default {
         await InteractionHelper.safeDefer(interaction);
 
         // --- SUBCOMMAND: LEADERBOARD (/cyberhunt arcanelb) ---
-        if (subcommand === 'leaderboard') {
+        if (subcommand === 'arcanelb') {
             if (!userScores || userScores.size === 0) {
                 throw new TitanBotError(
                     'No Cyber Hunt data found',
