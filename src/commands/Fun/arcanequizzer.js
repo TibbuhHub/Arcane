@@ -126,13 +126,12 @@ export default {
         let sessionScore = 0;
 
         const runStage = async () => {
-            // Check if all 8 stages are completed
             if (stageIndex >= questions.length) {
                 const newTotal = (userScores.get(userId) || 0) + sessionScore;
                 userScores.set(userId, newTotal);
 
                 const finalEmbed = new EmbedBuilder()
-                    .setTitle('🏆 Cyber Hunt Completed!')
+                    .setTitle(`🏆 Cyber Hunt Completed!`)
                     .setDescription(`Congratulations! You completed all **${questions.length} stages** of the Cyber Hunt!`)
                     .setColor('#57F287')
                     .addFields(
@@ -189,7 +188,6 @@ export default {
 
             const message = await interaction.fetchReply();
 
-            // Button Collector for Hints
             const buttonCollector = message.createMessageComponentCollector({ time: 300000 });
 
             buttonCollector.on('collect', async i => {
@@ -207,7 +205,6 @@ export default {
                 }
             });
 
-            // Message Collector for Answers
             const filter = m => m.author.id === interaction.user.id && !m.author.bot;
             const messageCollector = interaction.channel.createMessageCollector({ filter, time: 300000 });
 
@@ -227,7 +224,7 @@ export default {
                     await msg.reply({
                         embeds: [
                             new EmbedBuilder()
-                                .setTitle('🚩 Stage Clear!')
+                                .setTitle(`🚩 Stage Clear!`)
                                 .setDescription(`Correct! You answered **\({challenge.answer}** and earned **\){earnedPoints} pts**!`)
                                 .setColor('#57F287')
                                 .setFooter({ text: stageIndex + 1 < questions.length ? `Moving to Stage ${stageIndex + 2}...` : 'Finishing Hunt...' })
@@ -240,7 +237,7 @@ export default {
                     try {
                         await msg.react('❌');
                     } catch (e) {
-                        // Fallback if missing Reaction permissions
+                        // Ignore permission error if bot cannot add reactions
                     }
                 }
             });
@@ -252,7 +249,6 @@ export default {
             });
         };
 
-        // Start Stage 1
         runStage();
 
         if (logger?.debug) {
