@@ -167,9 +167,9 @@ export default {
                         { name: 'Total Score', value: '🏆 **' + newTotal + ' pts**', inline: true }
                     );
 
-                return await InteractionHelper.safeEditReply(interaction, {
-                    embeds: [finalEmbed],
-                    components: []
+                // Send final results as a brand new message
+                return await interaction.channel.send({
+                    embeds: [finalEmbed]
                 });
             }
 
@@ -187,9 +187,8 @@ export default {
                         { name: 'Total Score', value: '🏆 **' + newTotal + ' pts**', inline: true }
                     );
 
-                return await InteractionHelper.safeEditReply(interaction, {
-                    embeds: [timeoutEmbed],
-                    components: []
+                return await interaction.channel.send({
+                    embeds: [timeoutEmbed]
                 });
             }
 
@@ -234,12 +233,19 @@ export default {
                 return row;
             };
 
-            await InteractionHelper.safeEditReply(interaction, {
-                embeds: [buildEmbed()],
-                components: [buildRow()]
-            });
-
-            const message = await interaction.fetchReply();
+            // Send each question as a brand new channel message
+            let message;
+            if (stageIndex === 0) {
+                message = await InteractionHelper.safeEditReply(interaction, {
+                    embeds: [buildEmbed()],
+                    components: [buildRow()]
+                });
+            } else {
+                message = await interaction.channel.send({
+                    embeds: [buildEmbed()],
+                    components: [buildRow()]
+                });
+            }
 
             // Collectors set to remaining overall time (up to 2 hrs max)
             const collectorTimeout = Math.min(remainingTime, 7200000);
