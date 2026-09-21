@@ -19,6 +19,7 @@ const activeGames = new Map();
 // List of allowed channel IDs where this command can be executed
 const ALLOWED_CHANNEL_IDS = [
     '1551655109220634694' // Replace with your allowed Channel ID
+    '1551657573344878622'
 ];
 
 // Cyber Hunt 8-Stage Question Bank (3 Easy, 3 Medium, 2 Hard)
