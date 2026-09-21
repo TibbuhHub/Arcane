@@ -18,7 +18,7 @@ const activeGames = new Map();
 // Add your specific Discord channel IDs inside this array:
 const ALLOWED_CHANNEL_IDS = [
     '1551655109220634694', // Replace with your allowed Channel ID 1
-      // Replace with your allowed Channel ID 2 (if any)
+     '1551657573344878622' // Replace with your allowed Channel ID 2 (if any)
 ];
 
 // Cyber Hunt 8-Stage Question Bank (3 Easy, 3 Medium, 2 Hard)
