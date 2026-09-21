@@ -187,11 +187,8 @@ export default {
                 const score = entry[1];
                 const position = index + 1;
                 
-                // Determine the rank icon or number badge
-                let rankBadge = '#' + position;
-                if (position === 1) rankBadge = '🥇';
-                else if (position === 2) rankBadge = '🥈';
-                else if (position === 3) rankBadge = '🥉';
+                // Strictly use numerical rank badges for all positions
+                const rankBadge = '#' + position;
 
                 return rankBadge + ' — ' + String.fromCharCode(60) + '@' + userId + String.fromCharCode(62) + ' ➔ **' + score + ' Points**';
             });
