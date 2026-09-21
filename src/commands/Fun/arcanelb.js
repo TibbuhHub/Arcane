@@ -1,68 +1,80 @@
-const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
+import { SlashCommandBuilder, EmbedBuilder, MessageFlags } from 'discord.js';
+import { logger } from '../../utils/logger.js';
+import { TitanBotError, ErrorTypes } from '../../utils/errorHandler.js';
+import { InteractionHelper } from '../../utils/interactionHelper.js';
+import { userScores } from './cyberhunt.js';
 
-// List of allowed channel IDs where the leaderboard can be checked
-const ALLOWED_CHANNEL_IDS = [
-    '123456789012345678' // Replace with your leaderboard Channel ID
-];
+// Replace with your allowed channel ID
+const ALLOWED_CHANNEL_ID = '123456789012345678';
 
-module.exports = {
-    data: new SlashCommandBuilder()
-        .setName("arcanelb")
-        .setDescription("Displays the Cyber Hunt leaderboard rankings!"),
+export default {
+  data: new SlashCommandBuilder()
+    .setName('arcanelb')
+    .setDescription("Displays the Cyber Hunt challenge leaderboard")
+    .setDMPermission(false),
+  category: 'Fun',
 
-    category: 'Fun',
+  async execute(interaction, config, client) {
+    await InteractionHelper.safeDefer(interaction);
 
-    async execute(interaction, config, client) {
-        // Channel Restriction Check
-        if (ALLOWED_CHANNEL_IDS.length > 0 && !ALLOWED_CHANNEL_IDS.includes(interaction.channelId)) {
-            const allowedChannelsList = ALLOWED_CHANNEL_IDS.map(id => `<#${id}>`).join(', ');
-            return await interaction.reply({
-                content: `❌ This command can only be used in assigned channels: ${allowedChannelsList}`,
-                ephemeral: true
-            });
+    // Channel restriction check
+    if (interaction.channelId !== ALLOWED_CHANNEL_ID) {
+      await InteractionHelper.safeEditReply(interaction, {
+        embeds: [
+          new EmbedBuilder()
+            .setColor('#f1c40f')
+            .setDescription(`This command can only be used in <#${ALLOWED_CHANNEL_ID}>.`)
+        ],
+        flags: MessageFlags.Ephemeral
+      });
+      return;
+    }
+
+    // Check if scores database exists or is empty
+    if (!userScores || userScores.size === 0) {
+      throw new TitanBotError(
+        'No Cyber Hunt data found',
+        ErrorTypes.DATABASE,
+        'No Cyber Hunt scores recorded yet. Start a hunt using /cyberhunt!'
+      );
+    }
+
+    // Sort users by score in descending order and slice top 10
+    const sortedScores = Array.from(userScores.entries())
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 10);
+
+    const embed = new EmbedBuilder()
+      .setTitle('🏆 Arcane Cyber Hunt Leaderboard')
+      .setColor('#2ecc71')
+      .setDescription("Top 10 Cyber Hunt participants:")
+      .setTimestamp();
+
+    const leaderboardText = await Promise.all(
+      sortedScores.map(async ([userId, score], index) => {
+        try {
+          const member = await interaction.guild.members.fetch(userId).catch(() => null);
+          const userMention = member?.user.toString() || `<@${userId}>`;
+
+          let rankPrefix = `${index + 1}.`;
+          if (index === 0) rankPrefix = '🥇';
+          else if (index === 1) rankPrefix = '🥈';
+          else if (index === 2) rankPrefix = '🥉';
+          else rankPrefix = `**${index + 1}.**`;
+
+          return `\({rankPrefix}\){userMention} — **${score} pts**`;
+        } catch {
+          return `**\({index + 1}.** Error loading user\){userId} — **${score} pts**`;
         }
+      })
+    );
 
-        await interaction.deferReply();
+    embed.addFields({
+      name: 'Rankings',
+      value: leaderboardText.join('\n')
+    });
 
-        // Safely pull scores from client memory or custom helper
-        const userScores = client.userScores || global.userScores;
-
-        // Check if there are any scores recorded yet
-        if (!userScores || userScores.size === 0) {
-            return await interaction.editReply({
-                embeds: [
-                    new EmbedBuilder()
-                        .setTitle('🏆 Arcane Cyber Hunt Leaderboard')
-                        .setDescription('No scores have been recorded yet! Start a hunt using `/cyberhunt`.')
-                        .setColor('#FEE75C')
-                ]
-            });
-        }
-
-        // Sort users by score in descending order (highest score first)
-        const sortedScores = Array.from(userScores.entries())
-            .sort((a, b) => b[1] - a[1])
-            .slice(0, 10); // Top 10 players
-
-        // Medal emojis for top 3 positions
-        const medals = ['🥇', '🥈', '🥉'];
-
-        const leaderboardText = sortedScores
-            .map(([userId, score], index) => {
-                const badge = medals[index] || `**#${index + 1}**`;
-                return `\({badge} <@\){userId}> — **${score} pts**`;
-            })
-            .join('\n');
-
-        const leaderboardEmbed = new EmbedBuilder()
-            .setTitle('🏆 Arcane Cyber Hunt Leaderboard')
-            .setDescription(leaderboardText)
-            .setColor('#57F287')
-            .setFooter({ text: `Total Participants: ${userScores.size}` })
-            .setTimestamp();
-
-        await interaction.editReply({
-            embeds: [leaderboardEmbed]
-        });
-    },
+    await InteractionHelper.safeEditReply(interaction, { embeds: [embed] });
+    logger.debug(`Arcane leaderboard displayed for guild ${interaction.guildId}`);
+  }
 };
