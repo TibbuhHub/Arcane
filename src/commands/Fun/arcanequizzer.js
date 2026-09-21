@@ -11,6 +11,16 @@ import { logger } from '../../utils/logger.js';
 // Global score database
 const userScores = new Map();
 
+// Track active games per user: Map
+const activeGames = new Map();
+
+// List of allowed channel IDs where this command can be executed
+// Add your specific Discord channel IDs inside this array:
+const ALLOWED_CHANNEL_IDS = [
+    '1551655109220634694', // Replace with your allowed Channel ID 1
+      // Replace with your allowed Channel ID 2 (if any)
+];
+
 // Cyber Hunt 8-Stage Question Bank (3 Easy, 3 Medium, 2 Hard)
 const questions = [
     // --- EASY (3 Questions - 100 pts each) ---
@@ -132,7 +142,27 @@ export default {
         await InteractionHelper.safeDefer(interaction);
 
         const userId = interaction.user.id;
-        
+
+        // 1. Channel Restriction Check
+        if (ALLOWED_CHANNEL_IDS.length > 0 && !ALLOWED_CHANNEL_IDS.includes(interaction.channelId)) {
+            const allowedChannelsList = ALLOWED_CHANNEL_IDS.map(id => `<#${id}>`).join(', ');
+            return await InteractionHelper.safeEditReply(interaction, {
+                content: `❌ This command can only be used in assigned channels: ${allowedChannelsList}`,
+                ephemeral: true
+            });
+        }
+
+        // 2. Prevent Multiple Concurrent Sessions
+        if (activeGames.get(userId)) {
+            return await InteractionHelper.safeEditReply(interaction, {
+                content: '⚠️ You already have an active Cyber Hunt in progress! Please complete your current hunt before starting a new one.',
+                ephemeral: true
+            });
+        }
+
+        // Mark game as active for this user
+        activeGames.set(userId, true);
+
         if (!userScores.has(userId)) {
             userScores.set(userId, 0);
         }
@@ -152,6 +182,9 @@ export default {
 
             // Handle completion of all 8 stages
             if (stageIndex >= questions.length) {
+                // Release active game status
+                activeGames.delete(userId);
+
                 const totalTimeMs = Date.now() - startTime;
                 const formattedTime = formatDuration(totalTimeMs);
 
@@ -181,6 +214,9 @@ export default {
 
             // Handle 2-Hour timeout expire before finishing all stages
             if (remainingTime <= 0) {
+                // Release active game status on timeout
+                activeGames.delete(userId);
+
                 const newTotal = (userScores.get(userId) || 0) + sessionScore;
                 userScores.set(userId, newTotal);
 
@@ -326,6 +362,7 @@ export default {
 
             messageCollector.on('end', (collected, reason) => {
                 if (reason === 'time' && (Date.now() - startTime >= OVERALL_TIME_LIMIT_MS)) {
+                    activeGames.delete(userId);
                     interaction.channel.send('⏳ The 2-hour overall time limit for <@' + userId + '>\'s Cyber Hunt has expired!');
                 }
             });
