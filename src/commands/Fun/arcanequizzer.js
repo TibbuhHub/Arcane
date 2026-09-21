@@ -1,10 +1,10 @@
-const { 
+import { 
     SlashCommandBuilder, 
     EmbedBuilder, 
     ActionRowBuilder, 
     ButtonBuilder, 
     ButtonStyle 
-} = require('discord.js');
+} from 'discord.js';
 
 // Database to track user scores across rounds
 const userScores = new Map();
@@ -46,7 +46,7 @@ const questions = [
     }
 ];
 
-module.exports = {
+export default {
     data: new SlashCommandBuilder()
         .setName('cyberhunt')
         .setDescription('Start a Cyber Hunt challenge!'),
@@ -54,18 +54,15 @@ module.exports = {
     async execute(interaction) {
         const userId = interaction.user.id;
         
-        // Initialize user score if first time
         if (!userScores.has(userId)) {
             userScores.set(userId, 0);
         }
 
-        // Select a random question from the pool
         const challenge = questions[Math.floor(Math.random() * questions.length)];
         
         let hintsRevealed = 0;
         let hintPenalty = 0;
 
-        // Build Embed UI
         const buildEmbed = () => {
             const currentPoints = challenge.points - hintPenalty;
             const embed = new EmbedBuilder()
@@ -87,7 +84,6 @@ module.exports = {
             return embed;
         };
 
-        // Create Hint Button
         const buildRow = () => {
             const row = new ActionRowBuilder();
             const button = new ButtonBuilder()
@@ -105,8 +101,7 @@ module.exports = {
             fetchReply: true
         });
 
-        // 1. Button Collector (for hints)
-        const buttonCollector = response.createMessageComponentCollector({ time: 300000 }); // 5 min timeout
+        const buttonCollector = response.createMessageComponentCollector({ time: 300000 });
 
         buttonCollector.on('collect', async i => {
             if (i.user.id !== interaction.user.id) {
@@ -123,7 +118,6 @@ module.exports = {
             }
         });
 
-        // 2. Text Message Collector (for infinite attempts)
         const messageFilter = m => m.author.id === interaction.user.id;
         const messageCollector = interaction.channel.createMessageCollector({ filter: messageFilter, time: 300000 });
 
@@ -136,7 +130,6 @@ module.exports = {
                 const newTotal = userScores.get(userId) + earnedPoints;
                 userScores.set(userId, newTotal);
 
-                // Stop collectors
                 buttonCollector.stop();
                 messageCollector.stop();
 
@@ -150,12 +143,10 @@ module.exports = {
                     ]
                 });
             } else {
-                // Wrong answer - allow retry without ending round
                 await msg.react('❌');
             }
         });
 
-        // Cleanup on timeout
         messageCollector.on('end', (collected, reason) => {
             if (reason === 'time') {
                 interaction.followUp({ content: `⏳ Cyber Hunt time expired for this question! The answer was **${challenge.answer}**.` });
