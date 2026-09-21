@@ -8,8 +8,8 @@ import {
 import { InteractionHelper } from '../../utils/interactionHelper.js';
 import { logger } from '../../utils/logger.js';
 
-// Global score database
-const userScores = new Map();
+// Global score database (exported for leaderboard)
+export const userScores = new Map();
 
 // Track active games per user: Map
 const activeGames = new Map();
