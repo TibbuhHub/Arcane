@@ -132,6 +132,7 @@ export default {
         await InteractionHelper.safeDefer(interaction);
 
         const userId = interaction.user.id;
+        const channel = interaction.channel;
         
         if (!userScores.has(userId)) {
             userScores.set(userId, 0);
@@ -148,7 +149,7 @@ export default {
             const elapsedTime = Date.now() - startTime;
             const remainingTime = OVERALL_TIME_LIMIT_MS - elapsedTime;
 
-            // Handle completion of all 8 stages
+            // Check if user completed all 8 stages
             if (stageIndex >= questions.length) {
                 const totalTimeMs = Date.now() - startTime;
                 const formattedTime = formatDuration(totalTimeMs);
@@ -166,12 +167,10 @@ export default {
                         { name: 'Total Score', value: '🏆 **' + newTotal + ' pts**', inline: true }
                     );
 
-                return await interaction.channel.send({
-                    embeds: [finalEmbed]
-                });
+                return await channel.send({ embeds: [finalEmbed] });
             }
 
-            // Handle 2-Hour timeout expire before finishing all stages
+            // Check if 2-hour timer ran out
             if (remainingTime <= 0) {
                 const newTotal = (userScores.get(userId) || 0) + sessionScore;
                 userScores.set(userId, newTotal);
@@ -185,9 +184,7 @@ export default {
                         { name: 'Total Score', value: '🏆 **' + newTotal + ' pts**', inline: true }
                     );
 
-                return await interaction.channel.send({
-                    embeds: [timeoutEmbed]
-                });
+                return await channel.send({ embeds: [timeoutEmbed] });
             }
 
             const challenge = questions[stageIndex];
@@ -231,25 +228,25 @@ export default {
                 return row;
             };
 
-            let message;
+            // Always send each new question as a brand new message
+            let currentMessage;
             if (stageIndex === 0) {
-                message = await InteractionHelper.safeEditReply(interaction, {
+                currentMessage = await InteractionHelper.safeEditReply(interaction, {
                     embeds: [buildEmbed()],
                     components: [buildRow()]
                 });
             } else {
-                message = await interaction.channel.send({
+                currentMessage = await channel.send({
                     embeds: [buildEmbed()],
                     components: [buildRow()]
                 });
             }
 
-            const collectorTimeout = Math.min(remainingTime, 7200000);
-
-            const buttonCollector = message.createMessageComponentCollector({ time: collectorTimeout });
+            // Handle Hint Buttons
+            const buttonCollector = currentMessage.createMessageComponentCollector({ time: Math.min(remainingTime, 7200000) });
 
             buttonCollector.on('collect', async i => {
-                if (i.user.id !== interaction.user.id) {
+                if (i.user.id !== userId) {
                     return i.reply({ content: "This isn't your Cyber Hunt challenge!", ephemeral: true });
                 }
 
@@ -263,56 +260,65 @@ export default {
                 }
             });
 
-            // Filter out bots and ensure it's the exact user who invoked the command
-            const filter = m => m.author.id === interaction.user.id && !m.author.bot;
-            const messageCollector = interaction.channel.createMessageCollector({ filter, time: collectorTimeout });
+            // Loop to collect user answers until solved or timed out
+            let stageSolved = false;
 
-            messageCollector.on('collect', async msg => {
-                const cleanAnswer = function(text) {
-                    return text.trim().toLowerCase().replace(/[^a-z0-9]/g, '');
-                };
-                
-                const userAnswer = cleanAnswer(msg.content);
-                const expectedAnswer = cleanAnswer(challenge.answer);
+            while (!stageSolved) {
+                const currentRemaining = OVERALL_TIME_LIMIT_MS - (Date.now() - startTime);
+                if (currentRemaining <= 0) break;
 
-                if (userAnswer === expectedAnswer || userAnswer.includes(expectedAnswer)) {
-                    const earnedPoints = challenge.points - hintPenalty;
-                    sessionScore += earnedPoints;
-
-                    buttonCollector.stop();
-                    messageCollector.stop();
-
-                    const footerText = (stageIndex + 1 < questions.length) 
-                        ? 'Moving to Stage ' + (stageIndex + 2) + '...' 
-                        : 'Finishing Hunt...';
-
-                    await msg.reply({
-                        embeds: [
-                            new EmbedBuilder()
-                                .setTitle('🚩 Stage Clear!')
-                                .setDescription('Correct! You answered **' + challenge.answer + '** and earned **' + earnedPoints + ' pts**!')
-                                .setColor('#57F287')
-                                .setFooter({ text: footerText })
-                        ]
+                try {
+                    // Await the next message from the user specifically
+                    const collectedMessages = await channel.awaitMessages({
+                        filter: m => m.author.id === userId && !m.author.bot,
+                        max: 1,
+                        time: currentRemaining,
+                        errors: ['time']
                     });
 
-                    stageIndex++;
-                    runStage();
-                } else {
-                    // Attempt to react with ❌, fallback to silent error log if bot lacks permissions
-                    try {
-                        await msg.react('❌');
-                    } catch (e) {
-                        console.log('Bot lacks Add Reactions permission in channel.');
-                    }
-                }
-            });
+                    const userMsg = collectedMessages.first();
+                    const clean = text => text.trim().toLowerCase().replace(/[^a-z0-9]/g, '');
+                    
+                    const userAnswer = clean(userMsg.content);
+                    const expectedAnswer = clean(challenge.answer);
 
-            messageCollector.on('end', (collected, reason) => {
-                if (reason === 'time' && (Date.now() - startTime >= OVERALL_TIME_LIMIT_MS)) {
-                    interaction.channel.send('⏳ The 2-hour overall time limit for <@' + userId + '>\'s Cyber Hunt has expired!');
+                    if (userAnswer === expectedAnswer || userAnswer.includes(expectedAnswer)) {
+                        stageSolved = true;
+                        buttonCollector.stop();
+
+                        const earnedPoints = challenge.points - hintPenalty;
+                        sessionScore += earnedPoints;
+
+                        const footerText = (stageIndex + 1 < questions.length) 
+                            ? 'Moving to Stage ' + (stageIndex + 2) + '...' 
+                            : 'Finishing Hunt...';
+
+                        await userMsg.reply({
+                            embeds: [
+                                new EmbedBuilder()
+                                    .setTitle('🚩 Stage Clear!')
+                                    .setDescription('Correct! You answered **' + challenge.answer + '** and earned **' + earnedPoints + ' pts**!')
+                                    .setColor('#57F287')
+                                    .setFooter({ text: footerText })
+                            ]
+                        });
+
+                        stageIndex++;
+                        return runStage();
+                    } else {
+                        // Wrong answer feedback
+                        try {
+                            await userMsg.react('❌');
+                        } catch (e) {
+                            await userMsg.reply({ content: '❌ Incorrect answer! Try again.' });
+                        }
+                    }
+                } catch (err) {
+                    // Time expired for awaitMessages
+                    channel.send('⏳ The 2-hour overall time limit for <@' + userId + '>\'s Cyber Hunt has expired!');
+                    break;
                 }
-            });
+            }
         };
 
         runStage();
