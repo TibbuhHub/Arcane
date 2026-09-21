@@ -5,7 +5,7 @@ import { InteractionHelper } from '../../utils/interactionHelper.js';
 import { userScores } from './cyberhunt.js';
 
 // Replace with your allowed channel ID (as a string)
-const ALLOWED_CHANNEL_ID = 'YOUR_CHANNEL_ID_HERE';
+const ALLOWED_CHANNEL_ID = '1551656885290270720';
 
 export default {
   data: new SlashCommandBuilder()
@@ -23,7 +23,7 @@ export default {
         embeds: [
           new EmbedBuilder()
             .setColor('#f1c40f')
-            .setDescription(`This command can only be used in <#${ALLOWED_CHANNEL_ID}>.`)
+            .setDescription(`This command can only be used in <#${1551656885290270720}>.`)
         ],
         flags: MessageFlags.Ephemeral
       });
