@@ -131,12 +131,12 @@ export default {
                 userScores.set(userId, newTotal);
 
                 const finalEmbed = new EmbedBuilder()
-                    .setTitle(`🏆 Cyber Hunt Completed!`)
-                    .setDescription(`Congratulations! You completed all **${questions.length} stages** of the Cyber Hunt!`)
+                    .setTitle('🏆 Cyber Hunt Completed!')
+                    .setDescription('Congratulations! You completed all **' + questions.length + ' stages** of the Cyber Hunt!')
                     .setColor('#57F287')
                     .addFields(
-                        { name: 'Session Score', value: `**+${sessionScore} pts**`, inline: true },
-                        { name: 'Total Score', value: `🏆 **${newTotal} pts**`, inline: true }
+                        { name: 'Session Score', value: '**+' + sessionScore + ' pts**', inline: true },
+                        { name: 'Total Score', value: '🏆 **' + newTotal + ' pts**', inline: true }
                     );
 
                 return await InteractionHelper.safeEditReply(interaction, {
@@ -148,35 +148,40 @@ export default {
             const challenge = questions[stageIndex];
             let hintsRevealed = 0;
             let hintPenalty = 0;
-            
-const buildEmbed = () => {
-    const currentPoints = challenge.points - hintPenalty;
-    const embed = new EmbedBuilder()
-        .setTitle(`🎯 Stage \({stageIndex + 1}/\){questions.length}: ${challenge.difficulty} Challenge`)
-        .setColor(challenge.difficulty === 'Easy' ? '#57F287' : challenge.difficulty === 'Medium' ? '#FEE75C' : '#ED4245')
-        .addFields(
-            { name: 'Difficulty', value: challenge.difficulty, inline: true },
-            { name: 'Base Points', value: `${challenge.points} pts`, inline: true },
-            { name: 'Reward if Solved Now', value: `**${currentPoints} pts**`, inline: true },
-            { name: 'Riddle / Task', value: `> ${challenge.question}` }
-        )
-        .setFooter({ text: 'Type your answer in this channel! You have infinite attempts until solved.' });
 
-    if (hintsRevealed > 0) {
-        const revealedList = challenge.hints.slice(0, hintsRevealed).map(h => `💡 ${h}`).join('\n');
-        embed.addFields({ name: `Revealed Hints (-${hintPenalty} pts)`, value: revealedList });
-    }
+            const buildEmbed = () => {
+                const currentPoints = challenge.points - hintPenalty;
+                const embedTitle = '🎯 Stage ' + (stageIndex + 1) + '/' + questions.length + ': ' + challenge.difficulty + ' Challenge';
 
-    return embed;
-};
+                const embed = new EmbedBuilder()
+                    .setTitle(embedTitle)
+                    .setColor(challenge.difficulty === 'Easy' ? '#57F287' : challenge.difficulty === 'Medium' ? '#FEE75C' : '#ED4245')
+                    .addFields(
+                        { name: 'Difficulty', value: challenge.difficulty, inline: true },
+                        { name: 'Base Points', value: challenge.points + ' pts', inline: true },
+                        { name: 'Reward if Solved Now', value: '**' + currentPoints + ' pts**', inline: true },
+                        { name: 'Riddle / Task', value: '> ' + challenge.question }
+                    )
+                    .setFooter({ text: 'Type your answer in this channel! You have infinite attempts until solved.' });
+
+                if (hintsRevealed > 0) {
+                    const revealedList = challenge.hints.slice(0, hintsRevealed).map(function(h) { return '💡 ' + h; }).join('\n');
+                    embed.addFields({ name: 'Revealed Hints (-' + hintPenalty + ' pts)', value: revealedList });
+                }
+
+                return embed;
+            };
 
             const buildRow = () => {
                 const row = new ActionRowBuilder();
+                const buttonLabel = hintsRevealed >= 2 ? 'No More Hints' : 'Get Hint (-50 pts) [' + hintsRevealed + '/2]';
+                
                 const button = new ButtonBuilder()
-                    .setCustomId(`get_hint_\({interaction.id}_\){stageIndex}`)
-                    .setLabel(hintsRevealed >= 2 ? 'No More Hints' : `Get Hint (-50 pts) [${hintsRevealed}/2]`)
+                    .setCustomId('get_hint_' + interaction.id + '_' + stageIndex)
+                    .setLabel(buttonLabel)
                     .setStyle(ButtonStyle.Secondary)
                     .setDisabled(hintsRevealed >= 2);
+                    
                 row.addComponents(button);
                 return row;
             };
@@ -209,7 +214,9 @@ const buildEmbed = () => {
             const messageCollector = interaction.channel.createMessageCollector({ filter, time: 300000 });
 
             messageCollector.on('collect', async msg => {
-                const cleanAnswer = (text) => text.trim().toLowerCase().replace(/[^a-z0-9 ]/g, '');
+                const cleanAnswer = function(text) {
+                    return text.trim().toLowerCase().replace(/[^a-z0-9 ]/g, '');
+                };
                 
                 const userAnswer = cleanAnswer(msg.content);
                 const expectedAnswer = cleanAnswer(challenge.answer);
@@ -221,13 +228,17 @@ const buildEmbed = () => {
                     buttonCollector.stop();
                     messageCollector.stop();
 
+                    const footerText = (stageIndex + 1 < questions.length) 
+                        ? 'Moving to Stage ' + (stageIndex + 2) + '...' 
+                        : 'Finishing Hunt...';
+
                     await msg.reply({
                         embeds: [
                             new EmbedBuilder()
-                                .setTitle(`🚩 Stage Clear!`)
-                                .setDescription(`Correct! You answered **\({challenge.answer}** and earned **\){earnedPoints} pts**!`)
+                                .setTitle('🚩 Stage Clear!')
+                                .setDescription('Correct! You answered **' + challenge.answer + '** and earned **' + earnedPoints + ' pts**!')
                                 .setColor('#57F287')
-                                .setFooter({ text: stageIndex + 1 < questions.length ? `Moving to Stage ${stageIndex + 2}...` : 'Finishing Hunt...' })
+                                .setFooter({ text: footerText })
                         ]
                     });
 
@@ -237,14 +248,14 @@ const buildEmbed = () => {
                     try {
                         await msg.react('❌');
                     } catch (e) {
-                        // Ignore permission error if bot cannot add reactions
+                        // Ignore permission issues for reactions
                     }
                 }
             });
 
             messageCollector.on('end', (collected, reason) => {
                 if (reason === 'time') {
-                    interaction.channel.send(`⏳ Cyber Hunt time expired for <@${userId}> on Stage \({stageIndex + 1}! The answer was **\){challenge.answer}**.`);
+                    interaction.channel.send('⏳ Cyber Hunt time expired for <@' + userId + '> on Stage ' + (stageIndex + 1) + '! The answer was **' + challenge.answer + '**.');
                 }
             });
         };
@@ -252,7 +263,7 @@ const buildEmbed = () => {
         runStage();
 
         if (logger?.debug) {
-            logger.debug(`Cyber Hunt command started by user \({interaction.user.id} in guild\){interaction.guildId}`);
+            logger.debug('Cyber Hunt command started by user ' + interaction.user.id + ' in guild ' + interaction.guildId);
         }
     },
 };
