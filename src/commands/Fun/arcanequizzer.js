@@ -19,7 +19,7 @@ const activeGames = new Map();
 // List of allowed channel IDs where this command can be executed
 const ALLOWED_CHANNEL_IDS = [
     '1551655109220634694',
-    '1551657573344878622'// Replace with your allowed Channel ID
+    '1551657573344878622'
 ];
 
 // Cyber Hunt 8-Stage Question Bank (3 Easy, 3 Medium, 2 Hard)
@@ -188,7 +188,7 @@ export default {
                     const score = entry[1];
                     try {
                         const member = await interaction.guild.members.fetch(userId).catch(function() { return null; });
-                        const userMention = member ? member.user.toString() : '<@' + userId + '>';
+                        const userMention = member ? member.user.toString() : String.fromCharCode(60) + '@' + userId + String.fromCharCode(62);
 
                         let rankPrefix = (index + 1) + '.';
                         if (index === 0) rankPrefix = '🥇';
@@ -413,7 +413,7 @@ export default {
             messageCollector.on('end', function(collected, reason) {
                 if (reason === 'time' && (Date.now() - startTime >= OVERALL_TIME_LIMIT_MS)) {
                     activeGames.delete(userId);
-                    interaction.channel.send('⏳ The 2-hour overall time limit for <@' + userId + '>\'s Cyber Hunt has expired!');
+                    interaction.channel.send('⏳ The 2-hour overall time limit for ' + String.fromCharCode(60) + '@' + userId + String.fromCharCode(62) + '\'s Cyber Hunt has expired!');
                 }
             });
         };
