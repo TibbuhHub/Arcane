@@ -177,19 +177,22 @@ export default {
                 .slice(0, 10);
 
             const embed = new EmbedBuilder()
-                .setTitle('🛡️ [NEW FORMAT] Cryptex Standings')
+                .setTitle('🛡️ Cyber Hunt Standings')
                 .setColor('#3498db')
                 .setDescription("Here are the active contenders:")
                 .setTimestamp();
 
-            // Brand new formatting style using explicit block layout
             const leaderboardText = sortedScores.map(function(entry, index) {
                 const userId = entry[0];
                 const score = entry[1];
                 const position = index + 1;
                 
-                // Using a totally different look: Rank badge + explicit markdown block
-                return '`#' + position + '` — ' + String.fromCharCode(60) + '@' + userId + String.fromCharCode(62) + ' ➔ **' + score + ' Points**';
+                let rankDisplay = '`#' + position + '`';
+                if (position === 1) rankDisplay = '🥇';
+                else if (position === 2) rankDisplay = '🥈';
+                else if (position === 3) rankDisplay = '🥉';
+
+                return rankDisplay + ' — ' + String.fromCharCode(60) + '@' + userId + String.fromCharCode(62) + ' ➔ **' + score + ' Points**';
             });
 
             embed.addFields({
@@ -234,9 +237,6 @@ export default {
                 const totalTimeMs = Date.now() - startTime;
                 const formattedTime = formatDuration(totalTimeMs);
 
-                const newTotal = (userScores.get(userId) || 0) + sessionScore;
-                userScores.set(userId, newTotal);
-
                 const finalEmbed = new EmbedBuilder()
                     .setTitle('🏆 Cyber Hunt Completed!')
                     .setDescription('Congratulations! You completed all **' + questions.length + ' stages** of the Cyber Hunt!')
@@ -244,7 +244,7 @@ export default {
                     .addFields(
                         { name: 'Time Taken', value: '⏱️ **' + formattedTime + '**', inline: true },
                         { name: 'Session Score', value: '**+' + sessionScore + ' pts**', inline: true },
-                        { name: 'Total Score', value: '🏆 **' + newTotal + ' pts**', inline: true }
+                        { name: 'Total Score', value: '🏆 **' + userScores.get(userId) + ' pts**', inline: true }
                     );
 
                 if (lastQuestionMessage) {
@@ -260,16 +260,13 @@ export default {
             if (remainingTime <= 0) {
                 activeGames.delete(userId);
 
-                const newTotal = (userScores.get(userId) || 0) + sessionScore;
-                userScores.set(userId, newTotal);
-
                 const timeoutEmbed = new EmbedBuilder()
                     .setTitle('⏳ 2-Hour Cyber Hunt Limit Expired!')
                     .setDescription('Time has run out for this hunt! You reached **Stage ' + (stageIndex + 1) + '/' + questions.length + '**.')
                     .setColor('#ED4245')
                     .addFields(
                         { name: 'Session Score', value: '**+' + sessionScore + ' pts**', inline: true },
-                        { name: 'Total Score', value: '🏆 **' + newTotal + ' pts**', inline: true }
+                        { name: 'Total Score', value: '🏆 **' + userScores.get(userId) + ' pts**', inline: true }
                     );
 
                 if (lastQuestionMessage) {
@@ -363,11 +360,19 @@ export default {
                 };
                 
                 const userAnswer = cleanAnswer(msg.content);
-                const expectedAnswer = cleanAnswer(challenge.answer);
+                const expectedAnswer = transparentClean(challenge.answer);
+                
+                function transparentClean(t) {
+                    return t.trim().toLowerCase().replace(/[^a-z0-9 ]/g, '');
+                }
 
                 if (userAnswer === expectedAnswer) {
-                    const encryptedPoints = challenge.points - hintPenalty;
-                    sessionScore += encryptedPoints;
+                    const earnedPoints = challenge.points - hintPenalty;
+                    sessionScore += earnedPoints;
+
+                    // IMMEDIATELY update the global leaderboard map as points are earned!
+                    const currentTotal = userScores.get(userId) || 0;
+                    userScores.set(userId, currentTotal + earnedPoints);
 
                     buttonCollector.stop();
                     messageCollector.stop();
@@ -380,7 +385,7 @@ export default {
                         embeds: [
                             new EmbedBuilder()
                                 .setTitle('🚩 Stage Clear!')
-                                .setDescription('Correct! You answered **' + challenge.answer + '** and earned **' + encryptedPoints + ' pts**!')
+                                .setDescription('Correct! You answered **' + challenge.answer + '** and earned **' + earnedPoints + ' pts**!')
                                 .setColor('#57F287')
                                 .setFooter({ text: footerText })
                         ]
