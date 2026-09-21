@@ -1,19 +1,11 @@
-import { 
-    SlashCommandBuilder, 
-    EmbedBuilder 
-} from 'discord.js';
-import { InteractionHelper } from '../../utils/interactionHelper.js';
-import { logger } from '../../utils/logger.js';
-
-// Import the userScores Map from your cyberhunt command file
-import { userScores } from './cyberhunt.js';
+const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
 
 // List of allowed channel IDs where the leaderboard can be checked
 const ALLOWED_CHANNEL_IDS = [
-    '1551656885290270720' // Replace with your leaderboard Channel ID
+    '123456789012345678' // Replace with your leaderboard Channel ID
 ];
 
-export default {
+module.exports = {
     data: new SlashCommandBuilder()
         .setName("arcanelb")
         .setDescription("Displays the Cyber Hunt leaderboard rankings!"),
@@ -21,20 +13,23 @@ export default {
     category: 'Fun',
 
     async execute(interaction, config, client) {
-        await InteractionHelper.safeDefer(interaction);
-
         // Channel Restriction Check
         if (ALLOWED_CHANNEL_IDS.length > 0 && !ALLOWED_CHANNEL_IDS.includes(interaction.channelId)) {
             const allowedChannelsList = ALLOWED_CHANNEL_IDS.map(id => `<#${id}>`).join(', ');
-            return await InteractionHelper.safeEditReply(interaction, {
+            return await interaction.reply({
                 content: `❌ This command can only be used in assigned channels: ${allowedChannelsList}`,
                 ephemeral: true
             });
         }
 
+        await interaction.deferReply();
+
+        // Safely pull scores from client memory or custom helper
+        const userScores = client.userScores || global.userScores;
+
         // Check if there are any scores recorded yet
         if (!userScores || userScores.size === 0) {
-            return await InteractionHelper.safeEditReply(interaction, {
+            return await interaction.editReply({
                 embeds: [
                     new EmbedBuilder()
                         .setTitle('🏆 Arcane Cyber Hunt Leaderboard')
@@ -66,12 +61,8 @@ export default {
             .setFooter({ text: `Total Participants: ${userScores.size}` })
             .setTimestamp();
 
-        await InteractionHelper.safeEditReply(interaction, {
+        await interaction.editReply({
             embeds: [leaderboardEmbed]
         });
-
-        if (logger?.debug) {
-            logger.debug(`Arcane leaderboard viewed by ${interaction.user.id}`);
-        }
     },
 };
