@@ -108,11 +108,11 @@ const questions = [
         id: 8,
         difficulty: "Hard",
         points: 500,
-        question: "What security mechanism restricts execution privileges by isolating running applications in a tightly controlled environment?",
-        answer: "sandboxing",
+        question: "0100010101100100011001010110100001101111010100110110010001111000011011110100010001110111011101010110100001100111011011000110100001110110",
+        answer: "MY PRECIOUS",
         hints: [
-            "Hint 1: Named after a safe place where children play with sand.",
-            "Hint 2: Web browsers use this to prevent web pages from affecting the host OS."
+            "Hint 1: ROT 3, Library of Babel Website",
+            "Hint 2: 333, BinPaste"
         ]
     }
 ];
