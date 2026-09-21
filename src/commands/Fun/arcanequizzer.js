@@ -106,10 +106,25 @@ const questions = [
     }
 ];
 
+// Helper to format milliseconds into readable time (e.g. 14m 23s)
+function formatDuration(ms) {
+    const totalSeconds = Math.floor(ms / 1000);
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = totalSeconds % 60;
+
+    if (hours > 0) {
+        return hours + 'h ' + minutes + 'm ' + seconds + 's';
+    } else if (minutes > 0) {
+        return minutes + 'm ' + seconds + 's';
+    }
+    return seconds + 's';
+}
+
 export default {
     data: new SlashCommandBuilder()
         .setName("cyberhunt")
-        .setDescription("Start an 8-stage Cyber Hunt challenge!"),
+        .setDescription("Start an 8-stage Cyber Hunt challenge (2-hour limit)!"),
 
     category: 'Fun',
 
@@ -125,8 +140,20 @@ export default {
         let stageIndex = 0;
         let sessionScore = 0;
 
+        // 2-Hour Overall Hunt Limit (7,200,000 ms)
+        const OVERALL_TIME_LIMIT_MS = 2 * 60 * 60 * 1000; 
+        const startTime = Date.now();
+
         const runStage = async () => {
+            // Check overall time remaining
+            const elapsedTime = Date.now() - startTime;
+            const remainingTime = OVERALL_TIME_LIMIT_MS - elapsedTime;
+
+            // Handle completion of all 8 stages
             if (stageIndex >= questions.length) {
+                const totalTimeMs = Date.now() - startTime;
+                const formattedTime = formatDuration(totalTimeMs);
+
                 const newTotal = (userScores.get(userId) || 0) + sessionScore;
                 userScores.set(userId, newTotal);
 
@@ -135,12 +162,33 @@ export default {
                     .setDescription('Congratulations! You completed all **' + questions.length + ' stages** of the Cyber Hunt!')
                     .setColor('#57F287')
                     .addFields(
+                        { name: 'Time Taken', value: '⏱️ **' + formattedTime + '**', inline: true },
                         { name: 'Session Score', value: '**+' + sessionScore + ' pts**', inline: true },
                         { name: 'Total Score', value: '🏆 **' + newTotal + ' pts**', inline: true }
                     );
 
                 return await InteractionHelper.safeEditReply(interaction, {
                     embeds: [finalEmbed],
+                    components: []
+                });
+            }
+
+            // Handle 2-Hour timeout expire before finishing all stages
+            if (remainingTime <= 0) {
+                const newTotal = (userScores.get(userId) || 0) + sessionScore;
+                userScores.set(userId, newTotal);
+
+                const timeoutEmbed = new EmbedBuilder()
+                    .setTitle('⏳ 2-Hour Cyber Hunt Limit Expired!')
+                    .setDescription('Time has run out for this hunt! You reached **Stage ' + (stageIndex + 1) + '/' + questions.length + '**.')
+                    .setColor('#ED4245')
+                    .addFields(
+                        { name: 'Session Score', value: '**+' + sessionScore + ' pts**', inline: true },
+                        { name: 'Total Score', value: '🏆 **' + newTotal + ' pts**', inline: true }
+                    );
+
+                return await InteractionHelper.safeEditReply(interaction, {
+                    embeds: [timeoutEmbed],
                     components: []
                 });
             }
@@ -162,7 +210,7 @@ export default {
                         { name: 'Reward if Solved Now', value: '**' + currentPoints + ' pts**', inline: true },
                         { name: 'Riddle / Task', value: '> ' + challenge.question }
                     )
-                    .setFooter({ text: 'Type your answer in this channel! You have infinite attempts until solved.' });
+                    .setFooter({ text: 'Type your answer in this channel! Overall time limit: 2 hours.' });
 
                 if (hintsRevealed > 0) {
                     const revealedList = challenge.hints.slice(0, hintsRevealed).map(function(h) { return '💡 ' + h; }).join('\n');
@@ -193,7 +241,10 @@ export default {
 
             const message = await interaction.fetchReply();
 
-            const buttonCollector = message.createMessageComponentCollector({ time: 300000 });
+            // Collectors set to remaining overall time (up to 2 hrs max)
+            const collectorTimeout = Math.min(remainingTime, 7200000);
+
+            const buttonCollector = message.createMessageComponentCollector({ time: collectorTimeout });
 
             buttonCollector.on('collect', async i => {
                 if (i.user.id !== interaction.user.id) {
@@ -211,7 +262,7 @@ export default {
             });
 
             const filter = m => m.author.id === interaction.user.id && !m.author.bot;
-            const messageCollector = interaction.channel.createMessageCollector({ filter, time: 300000 });
+            const messageCollector = interaction.channel.createMessageCollector({ filter, time: collectorTimeout });
 
             messageCollector.on('collect', async msg => {
                 const cleanAnswer = function(text) {
@@ -254,8 +305,8 @@ export default {
             });
 
             messageCollector.on('end', (collected, reason) => {
-                if (reason === 'time') {
-                    interaction.channel.send('⏳ Cyber Hunt time expired for <@' + userId + '> on Stage ' + (stageIndex + 1) + '! The answer was **' + challenge.answer + '**.');
+                if (reason === 'time' && (Date.now() - startTime >= OVERALL_TIME_LIMIT_MS)) {
+                    interaction.channel.send('⏳ The 2-hour overall time limit for <@' + userId + '>\'s Cyber Hunt has expired!');
                 }
             });
         };
