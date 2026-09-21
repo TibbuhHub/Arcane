@@ -163,7 +163,7 @@ export default {
         await InteractionHelper.safeDefer(interaction);
 
         // --- SUBCOMMAND: LEADERBOARD (/cyberhunt arcanelb) ---
-        if (subcommand === 'arcanelb') {
+        if (subcommand === 'leaderboard') {
             if (!userScores || userScores.size === 0) {
                 throw new TitanBotError(
                     'No Cyber Hunt data found',
@@ -177,53 +177,33 @@ export default {
                 .slice(0, 10);
 
             const embed = new EmbedBuilder()
-                .setTitle('🏆 Arcane Cyber Hunt Leaderboard')
-                .setColor('#2ecc71')
-                .setDescription("Top 10 Cyber Hunt participants:")
+                .setTitle('🛡️ [NEW FORMAT] Cryptex Standings')
+                .setColor('#3498db')
+                .setDescription("Here are the active contenders:")
                 .setTimestamp();
 
-            const leaderboardText = await Promise.all(
-                sortedScores.map(async function(entry, index) {
-                    const userId = entry[0];
-                    const score = entry[1];
-                    try {
-                        const member = await interaction.guild.members.fetch(userId).catch(function() { return null; });
-                        const userMention = member ? member.user.toString() : String.fromCharCode(60) + '@' + userId + String.fromCharCode(62);
-
-                        let prefix = "1.";
-                        if (index === 0) {
-                            prefix = "🥇";
-                        } else if (index === 1) {
-                            prefix = "🥈";
-                        } else if (index === 2) {
-                            prefix = "🥉";
-                        } else {
-                            prefix = (index + 1) + ".";
-                        }
-
-                        return prefix + " " + userMention + " — **" + score + " pts**";
-                    } catch (e) {
-                        return "**" + (index + 1) + ".** " + String.fromCharCode(60) + "@" + userId + String.fromCharCode(62) + " — **" + score + " pts**";
-                    }
-                })
-            );
+            // Brand new formatting style using explicit block layout
+            const leaderboardText = sortedScores.map(function(entry, index) {
+                const userId = entry[0];
+                const score = entry[1];
+                const position = index + 1;
+                
+                // Using a totally different look: Rank badge + explicit markdown block
+                return '`#' + position + '` — ' + String.fromCharCode(60) + '@' + userId + String.fromCharCode(62) + ' ➔ **' + score + ' Points**';
+            });
 
             embed.addFields({
-                name: 'Rankings',
+                name: 'Leaderboard Stats',
                 value: leaderboardText.join('\n')
             });
 
             await InteractionHelper.safeEditReply(interaction, { embeds: [embed] });
-            if (logger?.debug) {
-                logger.debug('Arcane leaderboard displayed for guild ' + interaction.guildId);
-            }
             return;
         }
 
         // --- SUBCOMMAND: START (/cyberhunt start) ---
         const userId = interaction.user.id;
 
-        // Prevent Multiple Concurrent Sessions
         if (activeGames.get(userId)) {
             return await InteractionHelper.safeEditReply(interaction, {
                 content: '⚠️ You already have an active Cyber Hunt in progress! Please complete your current hunt before starting a new one.',
@@ -386,8 +366,8 @@ export default {
                 const expectedAnswer = cleanAnswer(challenge.answer);
 
                 if (userAnswer === expectedAnswer) {
-                    const earnedPoints = challenge.points - hintPenalty;
-                    sessionScore += earnedPoints;
+                    const encryptedPoints = challenge.points - hintPenalty;
+                    sessionScore += encryptedPoints;
 
                     buttonCollector.stop();
                     messageCollector.stop();
@@ -400,7 +380,7 @@ export default {
                         embeds: [
                             new EmbedBuilder()
                                 .setTitle('🚩 Stage Clear!')
-                                .setDescription('Correct! You answered **' + challenge.answer + '** and earned **' + earnedPoints + ' pts**!')
+                                .setDescription('Correct! You answered **' + challenge.answer + '** and earned **' + encryptedPoints + ' pts**!')
                                 .setColor('#57F287')
                                 .setFooter({ text: footerText })
                         ]
@@ -424,9 +404,5 @@ export default {
         };
 
         runStage();
-
-        if (logger?.debug) {
-            logger.debug('Cyber Hunt command started by user ' + interaction.user.id + ' in guild ' + interaction.guildId);
-        }
     },
 };
