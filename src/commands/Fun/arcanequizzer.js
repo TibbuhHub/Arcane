@@ -148,27 +148,27 @@ export default {
             const challenge = questions[stageIndex];
             let hintsRevealed = 0;
             let hintPenalty = 0;
+            
+const buildEmbed = () => {
+    const currentPoints = challenge.points - hintPenalty;
+    const embed = new EmbedBuilder()
+        .setTitle(`🎯 Stage \({stageIndex + 1}/\){questions.length}: ${challenge.difficulty} Challenge`)
+        .setColor(challenge.difficulty === 'Easy' ? '#57F287' : challenge.difficulty === 'Medium' ? '#FEE75C' : '#ED4245')
+        .addFields(
+            { name: 'Difficulty', value: challenge.difficulty, inline: true },
+            { name: 'Base Points', value: `${challenge.points} pts`, inline: true },
+            { name: 'Reward if Solved Now', value: `**${currentPoints} pts**`, inline: true },
+            { name: 'Riddle / Task', value: `> ${challenge.question}` }
+        )
+        .setFooter({ text: 'Type your answer in this channel! You have infinite attempts until solved.' });
 
-            const buildEmbed = () => {
-                const currentPoints = challenge.points - hintPenalty;
-                const embed = new EmbedBuilder()
-                    .setTitle(`🎯 Stage \({stageIndex + 1}/\){questions.length}: ${challenge.difficulty} Challenge`)
-                    .setColor(challenge.difficulty === 'Easy' ? '#57F287' : challenge.difficulty === 'Medium' ? '#FEE75C' : '#ED4245')
-                    .addFields(
-                        { name: 'Difficulty', value: challenge.difficulty, inline: true },
-                        { name: 'Base Points', value: `${challenge.points} pts`, inline: true },
-                        { name: 'Reward if Solved Now', value: `**${currentPoints} pts**`, inline: true },
-                        { name: 'Riddle / Task', value: `> ${challenge.question}` }
-                    )
-                    .setFooter({ text: 'Type your answer in this channel! You have infinite attempts until solved.' });
+    if (hintsRevealed > 0) {
+        const revealedList = challenge.hints.slice(0, hintsRevealed).map(h => `💡 ${h}`).join('\n');
+        embed.addFields({ name: `Revealed Hints (-${hintPenalty} pts)`, value: revealedList });
+    }
 
-                if (hintsRevealed > 0) {
-                    const revealedList = challenge.hints.slice(0, hintsRevealed).map(h => `💡 ${h}`).join('\n');
-                    embed.addFields({ name: `Revealed Hints (-${hintPenalty} pts)`, value: revealedList });
-                }
-
-                return embed;
-            };
+    return embed;
+};
 
             const buildRow = () => {
                 const row = new ActionRowBuilder();
