@@ -56,10 +56,10 @@ export default {
     category: 'Fun',
 
     async execute(interaction, config, client) {
-        // Defer interaction to give the bot time to process
         await InteractionHelper.safeDefer(interaction);
 
         const userId = interaction.user.id;
+        const channel = interaction.channel;
         
         if (!userScores.has(userId)) {
             userScores.set(userId, 0);
@@ -94,7 +94,7 @@ export default {
         const buildRow = () => {
             const row = new ActionRowBuilder();
             const button = new ButtonBuilder()
-                .setCustomId('get_hint')
+                .setCustomId(`get_hint_${interaction.id}`)
                 .setLabel(hintsRevealed >= 2 ? 'No More Hints' : `Get Hint (-50 pts) [${hintsRevealed}/2]`)
                 .setStyle(ButtonStyle.Secondary)
                 .setDisabled(hintsRevealed >= 2);
@@ -102,13 +102,12 @@ export default {
             return row;
         };
 
-        // Edit the deferred reply with the quiz embed and button
         const response = await InteractionHelper.safeEditReply(interaction, {
             embeds: [buildEmbed()],
             components: [buildRow()]
         });
 
-        // Button Collector for Hints
+        // 1. Button Collector for Hints
         const buttonCollector = response.createMessageComponentCollector({ time: 300000 });
 
         buttonCollector.on('collect', async i => {
@@ -126,9 +125,9 @@ export default {
             }
         });
 
-        // Message Collector for Infinite Text Answers
-        const messageFilter = m => m.author.id === interaction.user.id;
-        const messageCollector = interaction.channel.createMessageCollector({ filter: messageFilter, time: 300000 });
+        // 2. Message Collector for Answers (Listening to Channel directly)
+        const filter = m => m.author.id === interaction.user.id && !m.author.bot;
+        const messageCollector = channel.createMessageCollector({ filter, time: 300000 });
 
         messageCollector.on('collect', async msg => {
             const userAnswer = msg.content.trim().toLowerCase();
@@ -146,22 +145,28 @@ export default {
                     embeds: [
                         new EmbedBuilder()
                             .setTitle('🚩 Flag Captured!')
-                            .setDescription(`Correct! You answered **\({challenge.answer}** and earned **\){earnedPoints} pts**!`)
+                            .setDescription(`Correct! You answered **${challenge.answer}** and earned **${earnedPoints} pts**!`)
                             .setColor('#57F287')
                             .addFields({ name: 'Total Score', value: `🏆 **${newTotal} pts**` })
                     ]
                 });
             } else {
-                await msg.react('❌');
+                // Reaction gives instant feedback without cluttering chat
+                try {
+                    await msg.react('❌');
+                } catch (e) {
+                    // Fallback if missing Reaction permission
+                    await msg.reply({ content: '❌ Incorrect answer, try again!', ephemeral: true });
+                }
             }
         });
 
         messageCollector.on('end', (collected, reason) => {
             if (reason === 'time') {
-                interaction.followUp({ content: `⏳ Cyber Hunt time expired for this question! The answer was **${challenge.answer}**.` });
+                channel.send(`⏳ Cyber Hunt time expired for <@${userId}>! The answer was **${challenge.answer}**.`);
             }
         });
 
-        logger.debug(`Cyber Hunt command started by user \({interaction.user.id} in guild\){interaction.guildId}`);
+        logger.debug(`Cyber Hunt command started by user ${interaction.user.id} in guild ${interaction.guildId}`);
     },
 };
