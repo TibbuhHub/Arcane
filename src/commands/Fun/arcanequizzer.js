@@ -5,8 +5,10 @@ import {
     ButtonBuilder, 
     ButtonStyle 
 } from 'discord.js';
+import { InteractionHelper } from '../../utils/interactionHelper.js';
+import { logger } from '../../utils/logger.js';
 
-// Database to track user scores across rounds
+// Score database across rounds
 const userScores = new Map();
 
 // Cyber Hunt Question Bank
@@ -48,10 +50,15 @@ const questions = [
 
 export default {
     data: new SlashCommandBuilder()
-        .setName('cyberhunt')
-        .setDescription('Start a Cyber Hunt challenge!'),
+        .setName("cyberhunt")
+        .setDescription("Start a Cyber Hunt challenge!"),
 
-    async execute(interaction) {
+    category: 'Fun',
+
+    async execute(interaction, config, client) {
+        // Defer interaction to give the bot time to process
+        await InteractionHelper.safeDefer(interaction);
+
         const userId = interaction.user.id;
         
         if (!userScores.has(userId)) {
@@ -95,12 +102,13 @@ export default {
             return row;
         };
 
-        const response = await interaction.reply({
+        // Edit the deferred reply with the quiz embed and button
+        const response = await InteractionHelper.safeEditReply(interaction, {
             embeds: [buildEmbed()],
-            components: [buildRow()],
-            fetchReply: true
+            components: [buildRow()]
         });
 
+        // Button Collector for Hints
         const buttonCollector = response.createMessageComponentCollector({ time: 300000 });
 
         buttonCollector.on('collect', async i => {
@@ -118,6 +126,7 @@ export default {
             }
         });
 
+        // Message Collector for Infinite Text Answers
         const messageFilter = m => m.author.id === interaction.user.id;
         const messageCollector = interaction.channel.createMessageCollector({ filter: messageFilter, time: 300000 });
 
@@ -137,7 +146,7 @@ export default {
                     embeds: [
                         new EmbedBuilder()
                             .setTitle('🚩 Flag Captured!')
-                            .setDescription(`Correct! You answered **${challenge.answer}** and earned **${earnedPoints} pts**!`)
+                            .setDescription(`Correct! You answered **\({challenge.answer}** and earned **\){earnedPoints} pts**!`)
                             .setColor('#57F287')
                             .addFields({ name: 'Total Score', value: `🏆 **${newTotal} pts**` })
                     ]
@@ -152,5 +161,7 @@ export default {
                 interaction.followUp({ content: `⏳ Cyber Hunt time expired for this question! The answer was **${challenge.answer}**.` });
             }
         });
-    }
+
+        logger.debug(`Cyber Hunt command started by user \({interaction.user.id} in guild\){interaction.guildId}`);
+    },
 };
