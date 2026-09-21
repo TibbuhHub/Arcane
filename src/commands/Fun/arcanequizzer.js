@@ -145,7 +145,6 @@ export default {
         const startTime = Date.now();
 
         const runStage = async () => {
-            // Check overall time remaining
             const elapsedTime = Date.now() - startTime;
             const remainingTime = OVERALL_TIME_LIMIT_MS - elapsedTime;
 
@@ -167,7 +166,6 @@ export default {
                         { name: 'Total Score', value: '🏆 **' + newTotal + ' pts**', inline: true }
                     );
 
-                // Send final results as a brand new message
                 return await interaction.channel.send({
                     embeds: [finalEmbed]
                 });
@@ -233,7 +231,6 @@ export default {
                 return row;
             };
 
-            // Send each question as a brand new channel message
             let message;
             if (stageIndex === 0) {
                 message = await InteractionHelper.safeEditReply(interaction, {
@@ -247,7 +244,6 @@ export default {
                 });
             }
 
-            // Collectors set to remaining overall time (up to 2 hrs max)
             const collectorTimeout = Math.min(remainingTime, 7200000);
 
             const buttonCollector = message.createMessageComponentCollector({ time: collectorTimeout });
@@ -267,18 +263,19 @@ export default {
                 }
             });
 
+            // Filter out bots and ensure it's the exact user who invoked the command
             const filter = m => m.author.id === interaction.user.id && !m.author.bot;
             const messageCollector = interaction.channel.createMessageCollector({ filter, time: collectorTimeout });
 
             messageCollector.on('collect', async msg => {
                 const cleanAnswer = function(text) {
-                    return text.trim().toLowerCase().replace(/[^a-z0-9 ]/g, '');
+                    return text.trim().toLowerCase().replace(/[^a-z0-9]/g, '');
                 };
                 
                 const userAnswer = cleanAnswer(msg.content);
                 const expectedAnswer = cleanAnswer(challenge.answer);
 
-                if (userAnswer === expectedAnswer) {
+                if (userAnswer === expectedAnswer || userAnswer.includes(expectedAnswer)) {
                     const earnedPoints = challenge.points - hintPenalty;
                     sessionScore += earnedPoints;
 
@@ -302,10 +299,11 @@ export default {
                     stageIndex++;
                     runStage();
                 } else {
+                    // Attempt to react with ❌, fallback to silent error log if bot lacks permissions
                     try {
                         await msg.react('❌');
                     } catch (e) {
-                        // Ignore permission issues for reactions
+                        console.log('Bot lacks Add Reactions permission in channel.');
                     }
                 }
             });
