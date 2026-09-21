@@ -112,21 +112,16 @@ export default {
 
         let stageIndex = 0;
         let sessionScore = 0;
-        
-        // Array to record time taken for each stage
         const stageTimeLogs = [];
 
-        // Function to run each stage sequentially
         const runStage = async () => {
             if (stageIndex >= stages.length) {
-                // Game Finished - Final Summary & Total Time Calculation
                 const newTotal = (userScores.get(userId) || 0) + sessionScore;
                 userScores.set(userId, newTotal);
 
                 const totalSeconds = stageTimeLogs.reduce((a, b) => a + b.seconds, 0);
                 const avgSeconds = (totalSeconds / stages.length).toFixed(1);
 
-                // Build time breakdown string
                 const timeBreakdown = stageTimeLogs
                     .map(log => `• **Stage \({log.stage} (\){log.difficulty}):** ${log.seconds}s`)
                     .join('\n');
@@ -151,8 +146,6 @@ export default {
             const challenge = stages[stageIndex];
             let hintsRevealed = 0;
             let hintPenalty = 0;
-            
-            // Record the exact timestamp when the question starts
             const startTime = Date.now();
 
             const buildEmbed = () => {
@@ -194,7 +187,6 @@ export default {
 
             const message = await interaction.fetchReply();
 
-            // 1. Button Collector for Hints (No timeout)
             const buttonCollector = message.createMessageComponentCollector();
 
             buttonCollector.on('collect', async i => {
@@ -212,7 +204,6 @@ export default {
                 }
             });
 
-            // 2. Text Collector for Answers (No timeout = Infinite time)
             const filter = m => m.author.id === interaction.user.id && !m.author.bot;
             const messageCollector = interaction.channel.createMessageCollector({ filter });
 
@@ -223,7 +214,6 @@ export default {
                 const expectedAnswer = cleanAnswer(challenge.answer);
 
                 if (userAnswer === expectedAnswer) {
-                    // Calculate time taken in seconds
                     const secondsTaken = Math.round((Date.now() - startTime) / 1000);
                     
                     stageTimeLogs.push({
@@ -242,22 +232,22 @@ export default {
                         content: `✅ **Correct!** (+\({earnedPoints} pts in **\){secondsTaken}s**). \({stageIndex + 1 < stages.length ? `Moving to Stage\){stageIndex + 2}...` : 'Finishing Hunt...'}`
                     });
 
-                    // Advance to next stage
                     stageIndex++;
                     runStage();
                 } else {
                     try {
                         await msg.react('❌');
                     } catch (e) {
-                        // Fallback
+                        // Ignore missing reaction permission
                     }
                 }
             });
         };
 
-        // Start the hunt sequence at Stage 1
         runStage();
 
-        logger.debug(`7-stage Cyber Hunt started by user \({interaction.user.id} in guild\){interaction.guildId}`);
+        if (logger?.debug) {
+            logger.debug(`7-stage Cyber Hunt started by user \({interaction.user.id} in guild\){interaction.guildId}`);
+        }
     },
 };
