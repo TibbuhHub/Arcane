@@ -4,7 +4,7 @@ import { TitanBotError, ErrorTypes } from '../../utils/errorHandler.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
 import { userScores } from './cyberhunt.js';
 
-// Replace with your allowed channel ID (as a string)
+// Replace with your allowed channel ID string
 const ALLOWED_CHANNEL_ID = '1551656885290270720';
 
 export default {
@@ -18,7 +18,7 @@ export default {
     await InteractionHelper.safeDefer(interaction);
 
     // Channel restriction check
-    if (interaction.channelId !== ALLOWED_CHANNEL_ID) {
+    if (interaction.channelId !== 1551656885290270720) {
       await InteractionHelper.safeEditReply(interaction, {
         embeds: [
           new EmbedBuilder()
@@ -45,7 +45,7 @@ export default {
       .slice(0, 10);
 
     const embed = new EmbedBuilder()
-      .setTitle('🏆 Cryptex Cyber Hunt Leaderboard')
+      .setTitle('🏆 Arcane Cyber Hunt Leaderboard')
       .setColor('#2ecc71')
       .setDescription("Top 10 Cyber Hunt participants:")
       .setTimestamp();
