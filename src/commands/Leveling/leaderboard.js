@@ -18,8 +18,7 @@ const activeGames = new Map();
 
 // List of allowed channel IDs where this command can be executed
 const ALLOWED_CHANNEL_IDS = [
-    '1551655109220634694',
-    '1551657573344878622'// Replace with your allowed Channel ID
+    '123456789012345678' // Replace with your allowed Channel ID
 ];
 
 // Cyber Hunt 8-Stage Question Bank (3 Easy, 3 Medium, 2 Hard)
@@ -153,9 +152,9 @@ export default {
 
         // 1. Channel Restriction Check for both subcommands
         if (ALLOWED_CHANNEL_IDS.length > 0 && !ALLOWED_CHANNEL_IDS.includes(interaction.channelId)) {
-            const allowedChannelsList = ALLOWED_CHANNEL_IDS.map(id => `<#${id}>`).join(', ');
+            const allowedChannelsList = ALLOWED_CHANNEL_IDS.map(function(id) { return '<#' + id + '>'; }).join(', ');
             return await interaction.reply({
-                content: `❌ This command can only be used in assigned channels: ${allowedChannelsList}`,
+                content: '❌ This command can only be used in assigned channels: ' + allowedChannelsList,
                 flags: MessageFlags.Ephemeral
             });
         }
@@ -173,7 +172,7 @@ export default {
             }
 
             const sortedScores = Array.from(userScores.entries())
-                .sort((a, b) => b[1] - a[1])
+                .sort(function(a, b) { return b[1] - a[1]; })
                 .slice(0, 10);
 
             const embed = new EmbedBuilder()
@@ -183,20 +182,22 @@ export default {
                 .setTimestamp();
 
             const leaderboardText = await Promise.all(
-                sortedScores.map(async ([userId, score], index) => {
+                sortedScores.map(async function(entry, index) {
+                    const userId = entry[0];
+                    const score = entry[1];
                     try {
-                        const member = await interaction.guild.members.fetch(userId).catch(() => null);
-                        const userMention = member?.user.toString() || `<@${userId}>`;
+                        const member = await interaction.guild.members.fetch(userId).catch(function() { return null; });
+                        const userMention = member ? member.user.toString() : '<@' + userId + '>';
 
-                        let rankPrefix = `${index + 1}.`;
+                        let rankPrefix = (index + 1) + '.';
                         if (index === 0) rankPrefix = '🥇';
                         else if (index === 1) rankPrefix = '🥈';
                         else if (index === 2) rankPrefix = '🥉';
-                        else rankPrefix = `**${index + 1}.**`;
+                        else rankPrefix = '**' + (index + 1) + '.**';
 
-                        return `\({rankPrefix}\){userMention} — **${score} pts**`;
-                    } catch {
-                        return `**\({index + 1}.** Error loading user\){userId} — **${score} pts**`;
+                        return rankPrefix + ' ' + userMention + ' — **' + score + ' pts**';
+                    } catch (e) {
+                        return '**' + (index + 1) + '.** Error loading user ' + userId + ' — **' + score + ' pts**';
                     }
                 })
             );
@@ -207,7 +208,9 @@ export default {
             });
 
             await InteractionHelper.safeEditReply(interaction, { embeds: [embed] });
-            logger.debug(`Arcane leaderboard displayed for guild ${interaction.guildId}`);
+            if (logger?.debug) {
+                logger.debug('Arcane leaderboard displayed for guild ' + interaction.guildId);
+            }
             return;
         }
 
@@ -235,7 +238,7 @@ export default {
         const OVERALL_TIME_LIMIT_MS = 2 * 60 * 60 * 1000; 
         const startTime = Date.now();
 
-        const runStage = async () => {
+        const runStage = async function() {
             const elapsedTime = Date.now() - startTime;
             const remainingTime = OVERALL_TIME_LIMIT_MS - elapsedTime;
 
@@ -250,12 +253,12 @@ export default {
 
                 const finalEmbed = new EmbedBuilder()
                     .setTitle('🏆 Cyber Hunt Completed!')
-                    .setDescription(`Congratulations! You completed all **${questions.length} stages** of the Cyber Hunt!`)
+                    .setDescription('Congratulations! You completed all **' + questions.length + ' stages** of the Cyber Hunt!')
                     .setColor('#57F287')
                     .addFields(
-                        { name: 'Time Taken', value: `⏱️ **${formattedTime}**`, inline: true },
-                        { name: 'Session Score', value: `**+${sessionScore} pts**`, inline: true },
-                        { name: 'Total Score', value: `🏆 **${newTotal} pts**`, inline: true }
+                        { name: 'Time Taken', value: '⏱️ **' + formattedTime + '**', inline: true },
+                        { name: 'Session Score', value: '**+' + sessionScore + ' pts**', inline: true },
+                        { name: 'Total Score', value: '🏆 **' + newTotal + ' pts**', inline: true }
                     );
 
                 if (lastQuestionMessage) {
@@ -276,11 +279,11 @@ export default {
 
                 const timeoutEmbed = new EmbedBuilder()
                     .setTitle('⏳ 2-Hour Cyber Hunt Limit Expired!')
-                    .setDescription(`Time has run out for this hunt! You reached **Stage \({stageIndex + 1}/\){questions.length}**.`)
+                    .setDescription('Time has run out for this hunt! You reached **Stage ' + (stageIndex + 1) + '/' + questions.length + '**.')
                     .setColor('#ED4245')
                     .addFields(
-                        { name: 'Session Score', value: `**+${sessionScore} pts**`, inline: true },
-                        { name: 'Total Score', value: `🏆 **${newTotal} pts**`, inline: true }
+                        { name: 'Session Score', value: '**+' + sessionScore + ' pts**', inline: true },
+                        { name: 'Total Score', value: '🏆 **' + newTotal + ' pts**', inline: true }
                     );
 
                 if (lastQuestionMessage) {
@@ -297,35 +300,35 @@ export default {
             let hintsRevealed = 0;
             let hintPenalty = 0;
 
-            const buildEmbed = () => {
+            const buildEmbed = function() {
                 const currentPoints = challenge.points - hintPenalty;
-                const embedTitle = `🎯 Stage \({stageIndex + 1}/\){questions.length}: ${challenge.difficulty} Challenge`;
+                const embedTitle = '🎯 Stage ' + (stageIndex + 1) + '/' + questions.length + ': ' + challenge.difficulty + ' Challenge';
 
                 const embed = new EmbedBuilder()
                     .setTitle(embedTitle)
                     .setColor(challenge.difficulty === 'Easy' ? '#57F287' : challenge.difficulty === 'Medium' ? '#FEE75C' : '#ED4245')
                     .addFields(
                         { name: 'Difficulty', value: challenge.difficulty, inline: true },
-                        { name: 'Base Points', value: `${challenge.points} pts`, inline: true },
-                        { name: 'Reward if Solved Now', value: `**${currentPoints} pts**`, inline: true },
-                        { name: 'Riddle / Task', value: `> ${challenge.question}` }
+                        { name: 'Base Points', value: challenge.points + ' pts', inline: true },
+                        { name: 'Reward if Solved Now', value: '**' + currentPoints + ' pts**', inline: true },
+                        { name: 'Riddle / Task', value: '> ' + challenge.question }
                     )
                     .setFooter({ text: 'Type your answer in this channel! Overall time limit: 2 hours.' });
 
                 if (hintsRevealed > 0) {
-                    const revealedList = challenge.hints.slice(0, hintsRevealed).map(h => `💡 ${h}`).join('\n');
-                    embed.addFields({ name: `Revealed Hints (-${hintPenalty} pts)`, value: revealedList });
+                    const revealedList = challenge.hints.slice(0, hintsRevealed).map(function(h) { return '💡 ' + h; }).join('\n');
+                    embed.addFields({ name: 'Revealed Hints (-' + hintPenalty + ' pts)', value: revealedList });
                 }
 
                 return embed;
             };
 
-            const buildRow = () => {
+            const buildRow = function() {
                 const row = new ActionRowBuilder();
-                const buttonLabel = hintsRevealed >= 2 ? 'No More Hints' : `Get Hint (-50 pts) [${hintsRevealed}/2]`;
+                const buttonLabel = hintsRevealed >= 2 ? 'No More Hints' : 'Get Hint (-50 pts) [' + hintsRevealed + '/2]';
                 
                 const button = new ButtonBuilder()
-                    .setCustomId(`get_hint_\({interaction.id}_\){stageIndex}`)
+                    .setCustomId('get_hint_' + interaction.id + '_' + stageIndex)
                     .setLabel(buttonLabel)
                     .setStyle(ButtonStyle.Secondary)
                     .setDisabled(hintsRevealed >= 2);
@@ -350,7 +353,7 @@ export default {
             const collectorTimeout = Math.min(remainingTime, 7200000);
             const buttonCollector = message.createMessageComponentCollector({ time: collectorTimeout });
 
-            buttonCollector.on('collect', async i => {
+            buttonCollector.on('collect', async function(i) {
                 if (i.user.id !== interaction.user.id) {
                     return i.reply({ content: "This isn't your Cyber Hunt challenge!", flags: MessageFlags.Ephemeral });
                 }
@@ -365,11 +368,13 @@ export default {
                 }
             });
 
-            const filter = m => m.author.id === interaction.user.id && !m.author.bot;
-            const messageCollector = interaction.channel.createMessageCollector({ filter, time: collectorTimeout });
+            const filter = function(m) { return m.author.id === interaction.user.id && !m.author.bot; };
+            const messageCollector = interaction.channel.createMessageCollector({ filter: filter, time: collectorTimeout });
 
-            messageCollector.on('collect', async msg => {
-                const cleanAnswer = (text) => text.trim().toLowerCase().replace(/[^a-z0-9 ]/g, '');
+            messageCollector.on('collect', async function(msg) {
+                const cleanAnswer = function(text) {
+                    return text.trim().toLowerCase().replace(/[^a-z0-9 ]/g, '');
+                };
                 
                 const userAnswer = cleanAnswer(msg.content);
                 const expectedAnswer = cleanAnswer(challenge.answer);
@@ -382,14 +387,14 @@ export default {
                     messageCollector.stop();
 
                     const footerText = (stageIndex + 1 < questions.length) 
-                        ? `Moving to Stage ${stageIndex + 2}...` 
+                        ? 'Moving to Stage ' + (stageIndex + 2) + '...' 
                         : 'Finishing Hunt...';
 
                     await msg.reply({
                         embeds: [
                             new EmbedBuilder()
                                 .setTitle('🚩 Stage Clear!')
-                                .setDescription(`Correct! You answered **\({challenge.answer}** and earned **\){earnedPoints} pts**!`)
+                                .setDescription('Correct! You answered **' + challenge.answer + '** and earned **' + earnedPoints + ' pts**!')
                                 .setColor('#57F287')
                                 .setFooter({ text: footerText })
                         ]
@@ -404,10 +409,10 @@ export default {
                 }
             });
 
-            messageCollector.on('end', (collected, reason) => {
+            messageCollector.on('end', function(collected, reason) {
                 if (reason === 'time' && (Date.now() - startTime >= OVERALL_TIME_LIMIT_MS)) {
                     activeGames.delete(userId);
-                    interaction.channel.send(`⏳ The 2-hour overall time limit for <@${userId}>'s Cyber Hunt has expired!`);
+                    interaction.channel.send('⏳ The 2-hour overall time limit for <@' + userId + '>\'s Cyber Hunt has expired!');
                 }
             });
         };
@@ -415,7 +420,7 @@ export default {
         runStage();
 
         if (logger?.debug) {
-            logger.debug(`Cyber Hunt command started by user \({interaction.user.id} in guild\){interaction.guildId}`);
+            logger.debug('Cyber Hunt command started by user ' + interaction.user.id + ' in guild ' + interaction.guildId);
         }
     },
 };
