@@ -126,7 +126,6 @@ export default {
         let sessionScore = 0;
 
         const runStage = async () => {
-            // Check if all 8 questions are completed
             if (stageIndex >= questions.length) {
                 const newTotal = (userScores.get(userId) || 0) + sessionScore;
                 userScores.set(userId, newTotal);
@@ -189,7 +188,6 @@ export default {
 
             const message = await interaction.fetchReply();
 
-            // Button Collector for Hints
             const buttonCollector = message.createMessageComponentCollector({ time: 300000 });
 
             buttonCollector.on('collect', async i => {
@@ -207,7 +205,6 @@ export default {
                 }
             });
 
-            // Message Collector for Answers
             const filter = m => m.author.id === interaction.user.id && !m.author.bot;
             const messageCollector = interaction.channel.createMessageCollector({ filter, time: 300000 });
 
@@ -228,14 +225,13 @@ export default {
                         content: `✅ **Correct!** (+\({earnedPoints} pts).\){stageIndex + 1 < questions.length ? `Moving to Stage ${stageIndex + 2}...` : 'Finishing Hunt...'}`
                     });
 
-                    // Advance to next stage
                     stageIndex++;
                     runStage();
                 } else {
                     try {
                         await msg.react('❌');
                     } catch (e) {
-                        // Fallback if missing Reaction permissions
+                        // Ignore missing reaction permissions
                     }
                 }
             });
@@ -247,9 +243,10 @@ export default {
             });
         };
 
-        // Begin sequence at Stage 1
         runStage();
 
-        logger.debug(`Cyber Hunt command started by user \({interaction.user.id} in guild\){interaction.guildId}`);
+        if (logger?.debug) {
+            logger.debug(`Cyber Hunt command started by user \({interaction.user.id} in guild\){interaction.guildId}`);
+        }
     },
 };
