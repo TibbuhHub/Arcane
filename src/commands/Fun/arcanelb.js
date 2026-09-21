@@ -4,8 +4,8 @@ import { TitanBotError, ErrorTypes } from '../../utils/errorHandler.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
 import { userScores } from './cyberhunt.js';
 
-// Replace with your allowed channel ID
-const ALLOWED_CHANNEL_ID = '123456789012345678';
+// Replace with your allowed channel ID (as a string)
+const ALLOWED_CHANNEL_ID = 'YOUR_CHANNEL_ID_HERE';
 
 export default {
   data: new SlashCommandBuilder()
@@ -45,7 +45,7 @@ export default {
       .slice(0, 10);
 
     const embed = new EmbedBuilder()
-      .setTitle('🏆 Arcane Cyber Hunt Leaderboard')
+      .setTitle('🏆 Cryptex Cyber Hunt Leaderboard')
       .setColor('#2ecc71')
       .setDescription("Top 10 Cyber Hunt participants:")
       .setTimestamp();
