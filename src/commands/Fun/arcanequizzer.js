@@ -3,22 +3,22 @@ import {
     EmbedBuilder, 
     ActionRowBuilder, 
     ButtonBuilder, 
-    ButtonStyle 
+    ButtonStyle,
+    MessageFlags 
 } from 'discord.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
 import { logger } from '../../utils/logger.js';
+import { TitanBotError, ErrorTypes } from '../../utils/errorHandler.js';
 
-// Global score database (exported for leaderboard)
+// Global score database (exported so other parts can read it if needed)
 export const userScores = new Map();
 
 // Track active games per user: Map
 const activeGames = new Map();
 
 // List of allowed channel IDs where this command can be executed
-// Add your specific Discord channel IDs inside this array:
 const ALLOWED_CHANNEL_IDS = [
-    '1551655109220634694', // Replace with your allowed Channel ID 1
-     '1551657573344878622' // Replace with your allowed Channel ID 2 (if any)
+    '1551655109220634694' // Replace with your allowed Channel ID
 ];
 
 // Cyber Hunt 8-Stage Question Bank (3 Easy, 3 Medium, 2 Hard)
@@ -134,33 +134,95 @@ function formatDuration(ms) {
 export default {
     data: new SlashCommandBuilder()
         .setName("cyberhunt")
-        .setDescription("Start an 8-stage Cyber Hunt challenge (2-hour limit)!"),
+        .setDescription("Cyber Hunt challenge commands")
+        .setDMPermission(false)
+        .addSubcommand(subcommand =>
+            subcommand
+                .setName('start')
+                .setDescription('Start an 8-stage Cyber Hunt challenge (2-hour limit)!'))
+        .addSubcommand(subcommand =>
+            subcommand
+                .setName('arcanelb')
+                .setDescription('Displays the Cyber Hunt challenge leaderboard')),
 
     category: 'Fun',
 
     async execute(interaction, config, client) {
-        await InteractionHelper.safeDefer(interaction);
+        const subcommand = interaction.options.getSubcommand();
 
-        const userId = interaction.user.id;
-
-        // 1. Channel Restriction Check
+        // 1. Channel Restriction Check for both subcommands
         if (ALLOWED_CHANNEL_IDS.length > 0 && !ALLOWED_CHANNEL_IDS.includes(interaction.channelId)) {
             const allowedChannelsList = ALLOWED_CHANNEL_IDS.map(id => `<#${id}>`).join(', ');
-            return await InteractionHelper.safeEditReply(interaction, {
+            return await interaction.reply({
                 content: `❌ This command can only be used in assigned channels: ${allowedChannelsList}`,
-                ephemeral: true
+                flags: MessageFlags.Ephemeral
             });
         }
 
-        // 2. Prevent Multiple Concurrent Sessions
+        await InteractionHelper.safeDefer(interaction);
+
+        // --- SUBCOMMAND: LEADERBOARD ---
+        if (subcommand === 'arcanelb') {
+            if (!userScores || userScores.size === 0) {
+                throw new TitanBotError(
+                    'No Cyber Hunt data found',
+                    ErrorTypes.DATABASE,
+                    'No Cyber Hunt scores recorded yet. Start a hunt using /cyberhunt start!'
+                );
+            }
+
+            const sortedScores = Array.from(userScores.entries())
+                .sort((a, b) => b[1] - a[1])
+                .slice(0, 10);
+
+            const embed = new EmbedBuilder()
+                .setTitle('🏆 Arcane Cyber Hunt Leaderboard')
+                .setColor('#2ecc71')
+                .setDescription("Top 10 Cyber Hunt participants:")
+                .setTimestamp();
+
+            const leaderboardText = await Promise.all(
+                sortedScores.map(async ([userId, score], index) => {
+                    try {
+                        const member = await interaction.guild.members.fetch(userId).catch(() => null);
+                        const userMention = member?.user.toString() || `<@${userId}>`;
+
+                        let rankPrefix = `${index + 1}.`;
+                        if (index === 0) rankPrefix = '🥇';
+                        else if (index === 1) rankPrefix = '🥈';
+                        else if (index === 2) rankPrefix = '🥉';
+                        else rankPrefix = `**${index + 1}.**`;
+
+                        return `\({rankPrefix}\){userMention} — **${score} pts**`;
+                    } catch {
+                        return `**\({index + 1}.** Error loading user\){userId} — **${score} pts**`;
+                    }
+                })
+            );
+
+            embed.addFields({
+                name: 'Rankings',
+                value: leaderboardText.join('\n')
+            });
+
+            await InteractionHelper.safeEditReply(interaction, { embeds: [embed] });
+            if (logger?.debug) {
+                logger.debug(`Arcane leaderboard displayed for guild ${interaction.guildId}`);
+            }
+            return;
+        }
+
+        // --- SUBCOMMAND: START ---
+        const userId = interaction.user.id;
+
+        // Prevent Multiple Concurrent Sessions
         if (activeGames.get(userId)) {
             return await InteractionHelper.safeEditReply(interaction, {
                 content: '⚠️ You already have an active Cyber Hunt in progress! Please complete your current hunt before starting a new one.',
-                ephemeral: true
+                flags: MessageFlags.Ephemeral
             });
         }
 
-        // Mark game as active for this user
         activeGames.set(userId, true);
 
         if (!userScores.has(userId)) {
@@ -171,18 +233,14 @@ export default {
         let sessionScore = 0;
         let lastQuestionMessage = null;
 
-        // 2-Hour Overall Hunt Limit (7,200,000 ms)
         const OVERALL_TIME_LIMIT_MS = 2 * 60 * 60 * 1000; 
         const startTime = Date.now();
 
         const runStage = async () => {
-            // Check overall time remaining
             const elapsedTime = Date.now() - startTime;
             const remainingTime = OVERALL_TIME_LIMIT_MS - elapsedTime;
 
-            // Handle completion of all 8 stages
             if (stageIndex >= questions.length) {
-                // Release active game status
                 activeGames.delete(userId);
 
                 const totalTimeMs = Date.now() - startTime;
@@ -201,7 +259,6 @@ export default {
                         { name: 'Total Score', value: '🏆 **' + newTotal + ' pts**', inline: true }
                     );
 
-                // Clean up previous prompt message before posting final results
                 if (lastQuestionMessage) {
                     try { await lastQuestionMessage.delete(); } catch (e) {}
                 }
@@ -212,9 +269,7 @@ export default {
                 });
             }
 
-            // Handle 2-Hour timeout expire before finishing all stages
             if (remainingTime <= 0) {
-                // Release active game status on timeout
                 activeGames.delete(userId);
 
                 const newTotal = (userScores.get(userId) || 0) + sessionScore;
@@ -280,16 +335,12 @@ export default {
                 return row;
             };
 
-            // Remove the old question message so we can move to the newest message slot
             if (lastQuestionMessage) {
                 try {
                     await lastQuestionMessage.delete();
-                } catch (e) {
-                    // Ignore error if message was already deleted
-                }
+                } catch (e) {}
             }
 
-            // Send a fresh message in the channel so it appears at the bottom
             const message = await interaction.channel.send({
                 embeds: [buildEmbed()],
                 components: [buildRow()]
@@ -297,14 +348,12 @@ export default {
 
             lastQuestionMessage = message;
 
-            // Collectors set to remaining overall time (up to 2 hrs max)
             const collectorTimeout = Math.min(remainingTime, 7200000);
-
             const buttonCollector = message.createMessageComponentCollector({ time: collectorTimeout });
 
             buttonCollector.on('collect', async i => {
                 if (i.user.id !== interaction.user.id) {
-                    return i.reply({ content: "This isn't your Cyber Hunt challenge!", ephemeral: true });
+                    return i.reply({ content: "This isn't your Cyber Hunt challenge!", flags: MessageFlags.Ephemeral });
                 }
 
                 if (hintsRevealed < 2) {
@@ -354,9 +403,7 @@ export default {
                 } else {
                     try {
                         await msg.react('❌');
-                    } catch (e) {
-                        // Ignore permission issues for reactions
-                    }
+                    } catch (e) {}
                 }
             });
 
