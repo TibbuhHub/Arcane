@@ -10,6 +10,7 @@ export const SLASH_ONLY_COMMANDS = new Set([
   'wipedata',
   'apply',
   'cyberhunt',
+  'arcanelb',
 ]);
 
 /** Subcommands blocked for every command when invoked via prefix. */
