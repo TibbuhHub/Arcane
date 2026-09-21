@@ -177,7 +177,7 @@ export default {
                 .slice(0, 10);
 
             const embed = new EmbedBuilder()
-                .setTitle('🛡️ Cyber Hunt Standings')
+                .setTitle('Cyber Hunt Standings')
                 .setColor('#3498db')
                 .setDescription("Here are the active contenders:")
                 .setTimestamp();
@@ -187,12 +187,13 @@ export default {
                 const score = entry[1];
                 const position = index + 1;
                 
-                let rankDisplay = '`#' + position + '`';
-                if (position === 1) rankDisplay = '🥇';
-                else if (position === 2) rankDisplay = '🥈';
-                else if (position === 3) rankDisplay = '🥉';
+                // Determine the rank icon or number badge
+                let rankBadge = '#' + position;
+                if (position === 1) rankBadge = '🥇';
+                else if (position === 2) rankBadge = '🥈';
+                else if (position === 3) rankBadge = '🥉';
 
-                return rankDisplay + ' — ' + String.fromCharCode(60) + '@' + userId + String.fromCharCode(62) + ' ➔ **' + score + ' Points**';
+                return rankBadge + ' — ' + String.fromCharCode(60) + '@' + userId + String.fromCharCode(62) + ' ➔ **' + score + ' Points**';
             });
 
             embed.addFields({
@@ -355,22 +356,18 @@ export default {
             const messageCollector = interaction.channel.createMessageCollector({ filter: filter, time: collectorTimeout });
 
             messageCollector.on('collect', async function(msg) {
-                const cleanAnswer = function(text) {
-                    return text.trim().toLowerCase().replace(/[^a-z0-9 ]/g, '');
-                };
-                
-                const userAnswer = cleanAnswer(msg.content);
-                const expectedAnswer = transparentClean(challenge.answer);
-                
                 function transparentClean(t) {
                     return t.trim().toLowerCase().replace(/[^a-z0-9 ]/g, '');
                 }
+                
+                const userAnswer = transparentClean(msg.content);
+                const expectedAnswer = transparentClean(challenge.answer);
 
                 if (userAnswer === expectedAnswer) {
                     const earnedPoints = challenge.points - hintPenalty;
                     sessionScore += earnedPoints;
 
-                    // IMMEDIATELY update the global leaderboard map as points are earned!
+                    // Immediately update global score map so /arcanelb shows it live
                     const currentTotal = userScores.get(userId) || 0;
                     userScores.set(userId, currentTotal + earnedPoints);
 
