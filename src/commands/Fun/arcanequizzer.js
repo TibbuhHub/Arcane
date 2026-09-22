@@ -63,7 +63,7 @@ const questions = [
         id: 4,
         difficulty: "Medium",
         points: 250,
-        question: "tgYjSZMEf",
+        question: "FuFcoZPMi",
         answer: "JINX",
         hints: [
             "Hint 1: BinPaste Backlink",
