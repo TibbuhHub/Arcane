@@ -86,7 +86,7 @@ const questions = [
         difficulty: "Medium",
         points: 250,
         question: "cG93ZGVyZWQgcm9vdCBvZiBhc3Bob2RlbCB0byBhbiBpbmZ1c2lvbiBvZiB3b3Jtd29vZA==",
-        answer: "encryption",
+        answer: "DRAUGHT OF LIVING DEATH",
         hints: [
             "Hint 1: First Potion's class",
             "Hint 2: What is this the recipe for?"
