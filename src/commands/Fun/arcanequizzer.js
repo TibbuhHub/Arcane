@@ -29,33 +29,33 @@ const questions = [
         id: 1,
         difficulty: "Easy",
         points: 100,
-        question: "I disguise myself as a legitimate program to trick you into running me. What type of malware am I?",
-        answer: "trojan",
+        question: "Gur gehgu vf... V nz Veba Zna",
+        answer: "ROBERT DOWNEY JR",
         hints: [
-            "Hint 1: Named after a famous wooden horse in ancient history.",
-            "Hint 2: It does not self-replicate like a worm."
+            "Hint 1: Actor",
+            "Hint 2: Dude srsly, Iron man Actor?"
         ]
     },
     {
         id: 2,
         difficulty: "Easy",
         points: 100,
-        question: "What term describes fraudulent communications designed to trick people into revealing sensitive information like passwords or credit cards?",
-        answer: "phishing",
+        question: "42108 456 34154402197 17995730 1517381 48401546 917992",
+        answer: "STEVE WOZNIAK",
         hints: [
-            "Hint 1: Sounds like a popular aquatic sport.",
-            "Hint 2: Often involves fake emails or malicious links."
+            "Hint 1: Base 36",
+            "Hint 2: Who co-founded apple with Steve Jobs"
         ]
     },
     {
         id: 3,
         difficulty: "Easy",
         points: 100,
-        question: "What type of malicious software encrypts a victim's files and demands payment to restore access?",
-        answer: "ransomware",
+        question: "01010100 01101000 01101111 01110010 00100111 01110011 00100000 01000011 01101111 01100100 01100101 00100000 01001110 01100001 01101101 01100101",
+        answer: "POINT BREAK",
         hints: [
-            "Hint 1: The first half of the word refers to money demanded for a captive.",
-            "Hint 2: Examples include WannaCry and LockBit."
+            "Hint 1: Binary Conversion",
+            "Hint 2: Thor Ragnarok"
         ]
     },
     // --- MEDIUM (3 Questions - 250 pts each) ---
@@ -63,33 +63,33 @@ const questions = [
         id: 4,
         difficulty: "Medium",
         points: 250,
-        question: "What term describes a cyber attack where attackers intercept and relay communication between two parties secretly?",
-        answer: "man in the middle",
+        question: "tgYjSZMEf",
+        answer: "JINX",
         hints: [
-            "Hint 1: Commonly abbreviated as MitM.",
-            "Hint 2: Think of someone eavesdropping right between person A and person B."
+            "Hint 1: BinPaste Backlink",
+            "Hint 2: Name of this bot."
         ]
     },
     {
         id: 5,
         difficulty: "Medium",
         points: 250,
-        question: "What security concept requires users to provide two or more verification factors to gain access to a resource?",
-        answer: "multi factor authentication",
+        question: "MS1CaXlzOFNOaVFhaEdnbVJjZFp6bUV0SWxpalA4NXZs",
+        answer: "LINKIN PARK",
         hints: [
-            "Hint 1: Commonly abbreviated as MFA or 2FA.",
-            "Hint 2: Often involves entering a code sent to your phone alongside your password."
+            "Hint 1: Base-64 then Backlink",
+            "Hint 2: And now you've become a polar bear (band name)"
         ]
     },
     {
         id: 6,
         difficulty: "Medium",
         points: 250,
-        question: "What is the process of converting readable plain text into unreadable ciphertext called?",
+        question: "cG93ZGVyZWQgcm9vdCBvZiBhc3Bob2RlbCB0byBhbiBpbmZ1c2lvbiBvZiB3b3Jtd29vZA==",
         answer: "encryption",
         hints: [
-            "Hint 1: The reverse process is called decryption.",
-            "Hint 2: Uses mathematical algorithms and keys to scramble data."
+            "Hint 1: First Potion's class",
+            "Hint 2: What is this the recipe for?"
         ]
     },
     // --- HARD (2 Questions - 500 pts each) ---
@@ -97,11 +97,11 @@ const questions = [
         id: 7,
         difficulty: "Hard",
         points: 500,
-        question: "Which cryptographic attack attempts to find two different inputs that produce the exact same hash output?",
-        answer: "collision attack",
+        question: "35oXIDqB7nY",
+        answer: "COCA COLA",
         hints: [
-            "Hint 1: Think about what happens when two objects crash into each other.",
-            "Hint 2: It exploits vulnerabilities in hash functions like MD5 or SHA-1."
+            "Hint 1: Youtube Backlink",
+            "Hint 2: Youtube Vid Description"
         ]
     },
     {
