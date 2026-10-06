@@ -32,19 +32,19 @@ const questions = [
         question: "Gur gehgu vf... V nz Veba Zna",
         answer: "ROBERT DOWNEY JR",
         hints: [
-            "Hint 1: Actor",
-            "Hint 2: Dude srsly, Iron man Actor?"
+            "Hint 1: ROT 13",
+            "Hint 2: Actor"
         ]
     },
     {
         id: 2,
         difficulty: "Easy",
         points: 100,
-        question: "42108 456 34154402197 17995730 1517381 48401546 917992",
-        answer: "STEVE WOZNIAK",
+        question: "54686579207468696e6b2069276d20686964696e6720696e2074686520736861646f7773",
+        answer: "BATMAN",
         hints: [
-            "Hint 1: Base 36",
-            "Hint 2: Who co-founded apple with Steve Jobs"
+            "Hint 1: Hexadecimal",
+            "Hint 2: Christian Bale, Robert Pattinson, Ben Afflec, Michael Keaton"
         ]
     },
     {
@@ -75,10 +75,10 @@ const questions = [
         difficulty: "Medium",
         points: 250,
         question: "MS1CaXlzOFNOaVFhaEdnbVJjZFp6bUV0SWxpalA4NXZs",
-        answer: "LINKIN PARK",
+        answer: "ARTIC MONKEYS",
         hints: [
             "Hint 1: Base-64 then Backlink",
-            "Hint 2: And now you've become a polar bear (band name)"
+            "Hint 2: R U Mine?"
         ]
     },
     {
@@ -140,7 +140,7 @@ export default {
         .addSubcommand(subcommand =>
             subcommand
                 .setName('start')
-                .setDescription('Start an 8-stage Cyber Hunt challenge (2-hour limit)!'))
+                .setDescription('Start an 8-stage Cyber Hunt challenge (1 hour 35 mins limit)!'))
         .addSubcommand(subcommand =>
             subcommand
                 .setName('arcanelb')
@@ -162,246 +162,4 @@ export default {
 
         await InteractionHelper.safeDefer(interaction);
 
-        // --- SUBCOMMAND: LEADERBOARD (/cyberhunt arcanelb) ---
-        if (subcommand === 'arcanelb') {
-            if (!userScores || userScores.size === 0) {
-                throw new TitanBotError(
-                    'No Cyber Hunt data found',
-                    ErrorTypes.DATABASE,
-                    'No Cyber Hunt scores recorded yet. Start a hunt using /cyberhunt start!'
-                );
-            }
-
-            const sortedScores = Array.from(userScores.entries())
-                .sort(function(a, b) { return b[1] - a[1]; })
-                .slice(0, 10);
-
-            const embed = new EmbedBuilder()
-                .setTitle('Cyber Hunt Standings')
-                .setColor('#3498db')
-                .setDescription("Here are the active contenders:")
-                .setTimestamp();
-
-            const leaderboardText = sortedScores.map(function(entry, index) {
-                const userId = entry[0];
-                const score = entry[1];
-                const position = index + 1;
-                
-                // Strictly use numerical rank badges for all positions
-                const rankBadge = '#' + position;
-
-                return rankBadge + ' — ' + String.fromCharCode(60) + '@' + userId + String.fromCharCode(62) + ' ➔ **' + score + ' Points**';
-            });
-
-            embed.addFields({
-                name: 'Leaderboard Stats',
-                value: leaderboardText.join('\n')
-            });
-
-            await InteractionHelper.safeEditReply(interaction, { embeds: [embed] });
-            return;
-        }
-
-        // --- SUBCOMMAND: START (/cyberhunt start) ---
-        const userId = interaction.user.id;
-
-        if (activeGames.get(userId)) {
-            return await InteractionHelper.safeEditReply(interaction, {
-                content: '⚠️ You already have an active Cyber Hunt in progress! Please complete your current hunt before starting a new one.',
-                flags: MessageFlags.Ephemeral
-            });
-        }
-
-        activeGames.set(userId, true);
-
-        if (!userScores.has(userId)) {
-            userScores.set(userId, 0);
-        }
-
-        let stageIndex = 0;
-        let sessionScore = 0;
-        let lastQuestionMessage = null;
-
-        const OVERALL_TIME_LIMIT_MS = 2 * 60 * 60 * 1000; 
-        const startTime = Date.now();
-
-        const runStage = async function() {
-            const elapsedTime = Date.now() - startTime;
-            const remainingTime = OVERALL_TIME_LIMIT_MS - elapsedTime;
-
-            if (stageIndex >= questions.length) {
-                activeGames.delete(userId);
-
-                const totalTimeMs = Date.now() - startTime;
-                const formattedTime = formatDuration(totalTimeMs);
-
-                const finalEmbed = new EmbedBuilder()
-                    .setTitle('🏆 Cyber Hunt Completed!')
-                    .setDescription('Congratulations! You completed all **' + questions.length + ' stages** of the Cyber Hunt!')
-                    .setColor('#57F287')
-                    .addFields(
-                        { name: 'Time Taken', value: '⏱️ **' + formattedTime + '**', inline: true },
-                        { name: 'Session Score', value: '**+' + sessionScore + ' pts**', inline: true },
-                        { name: 'Total Score', value: '🏆 **' + userScores.get(userId) + ' pts**', inline: true }
-                    );
-
-                if (lastQuestionMessage) {
-                    try { await lastQuestionMessage.delete(); } catch (e) {}
-                }
-
-                return await interaction.channel.send({
-                    embeds: [finalEmbed],
-                    components: []
-                });
-            }
-
-            if (remainingTime <= 0) {
-                activeGames.delete(userId);
-
-                const timeoutEmbed = new EmbedBuilder()
-                    .setTitle('⏳ 2-Hour Cyber Hunt Limit Expired!')
-                    .setDescription('Time has run out for this hunt! You reached **Stage ' + (stageIndex + 1) + '/' + questions.length + '**.')
-                    .setColor('#ED4245')
-                    .addFields(
-                        { name: 'Session Score', value: '**+' + sessionScore + ' pts**', inline: true },
-                        { name: 'Total Score', value: '🏆 **' + userScores.get(userId) + ' pts**', inline: true }
-                    );
-
-                if (lastQuestionMessage) {
-                    try { await lastQuestionMessage.delete(); } catch (e) {}
-                }
-
-                return await interaction.channel.send({
-                    embeds: [timeoutEmbed],
-                    components: []
-                });
-            }
-
-            const challenge = questions[stageIndex];
-            let hintsRevealed = 0;
-            let hintPenalty = 0;
-
-            const buildEmbed = function() {
-                const currentPoints = challenge.points - hintPenalty;
-                const embedTitle = '🎯 Stage ' + (stageIndex + 1) + '/' + questions.length + ': ' + challenge.difficulty + ' Challenge';
-
-                const embed = new EmbedBuilder()
-                    .setTitle(embedTitle)
-                    .setColor(challenge.difficulty === 'Easy' ? '#57F287' : challenge.difficulty === 'Medium' ? '#FEE75C' : '#ED4245')
-                    .addFields(
-                        { name: 'Difficulty', value: challenge.difficulty, inline: true },
-                        { name: 'Base Points', value: challenge.points + ' pts', inline: true },
-                        { name: 'Reward if Solved Now', value: '**' + currentPoints + ' pts**', inline: true },
-                        { name: 'Riddle / Task', value: '> ' + challenge.question }
-                    )
-                    .setFooter({ text: 'Type your answer in this channel! Overall time limit: 2 hours.' });
-
-                if (hintsRevealed > 0) {
-                    const revealedList = challenge.hints.slice(0, hintsRevealed).map(function(h) { return '💡 ' + h; }).join('\n');
-                    embed.addFields({ name: 'Revealed Hints (-' + hintPenalty + ' pts)', value: revealedList });
-                }
-
-                return embed;
-            };
-
-            const buildRow = function() {
-                const row = new ActionRowBuilder();
-                const buttonLabel = hintsRevealed >= 2 ? 'No More Hints' : 'Get Hint (-50 pts) [' + hintsRevealed + '/2]';
-                
-                const button = new ButtonBuilder()
-                    .setCustomId('get_hint_' + interaction.id + '_' + stageIndex)
-                    .setLabel(buttonLabel)
-                    .setStyle(ButtonStyle.Secondary)
-                    .setDisabled(hintsRevealed >= 2);
-                    
-                row.addComponents(button);
-                return row;
-            };
-
-            if (lastQuestionMessage) {
-                try {
-                    await lastQuestionMessage.delete();
-                } catch (e) {}
-            }
-
-            const message = await interaction.channel.send({
-                embeds: [buildEmbed()],
-                components: [buildRow()]
-            });
-
-            lastQuestionMessage = message;
-
-            const collectorTimeout = Math.min(remainingTime, 7200000);
-            const buttonCollector = message.createMessageComponentCollector({ time: collectorTimeout });
-
-            buttonCollector.on('collect', async function(i) {
-                if (i.user.id !== interaction.user.id) {
-                    return i.reply({ content: "This isn't your Cyber Hunt challenge!", flags: MessageFlags.Ephemeral });
-                }
-
-                if (hintsRevealed < 2) {
-                    hintsRevealed++;
-                    hintPenalty += 50;
-                    await i.update({
-                        embeds: [buildEmbed()],
-                        components: [buildRow()]
-                    });
-                }
-            });
-
-            const filter = function(m) { return m.author.id === interaction.user.id && !m.author.bot; };
-            const messageCollector = interaction.channel.createMessageCollector({ filter: filter, time: collectorTimeout });
-
-            messageCollector.on('collect', async function(msg) {
-                function transparentClean(t) {
-                    return t.trim().toLowerCase().replace(/[^a-z0-9 ]/g, '');
-                }
-                
-                const userAnswer = transparentClean(msg.content);
-                const expectedAnswer = transparentClean(challenge.answer);
-
-                if (userAnswer === expectedAnswer) {
-                    const earnedPoints = challenge.points - hintPenalty;
-                    sessionScore += earnedPoints;
-
-                    // Immediately update global score map so /arcanelb shows it live
-                    const currentTotal = userScores.get(userId) || 0;
-                    userScores.set(userId, currentTotal + earnedPoints);
-
-                    buttonCollector.stop();
-                    messageCollector.stop();
-
-                    const footerText = (stageIndex + 1 < questions.length) 
-                        ? 'Moving to Stage ' + (stageIndex + 2) + '...' 
-                        : 'Finishing Hunt...';
-
-                    await msg.reply({
-                        embeds: [
-                            new EmbedBuilder()
-                                .setTitle('🚩 Stage Clear!')
-                                .setDescription('Correct! You answered **' + challenge.answer + '** and earned **' + earnedPoints + ' pts**!')
-                                .setColor('#57F287')
-                                .setFooter({ text: footerText })
-                        ]
-                    });
-
-                    stageIndex++;
-                    runStage();
-                } else {
-                    try {
-                        await msg.react('❌');
-                    } catch (e) {}
-                }
-            });
-
-            messageCollector.on('end', function(collected, reason) {
-                if (reason === 'time' && (Date.now() - startTime >= OVERALL_TIME_LIMIT_MS)) {
-                    activeGames.delete(userId);
-                    interaction.channel.send('⏳ The 2-hour overall time limit for ' + String.fromCharCode(60) + '@' + userId + String.fromCharCode(62) + '\'s Cyber Hunt has expired!');
-                }
-            });
-        };
-
-        runStage();
-    },
-};
+        // --- SUBCOMMAND: LEADERBOARD (/
