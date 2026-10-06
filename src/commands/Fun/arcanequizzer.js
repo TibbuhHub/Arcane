@@ -140,7 +140,7 @@ export default {
         .addSubcommand(subcommand =>
             subcommand
                 .setName('start')
-                .setDescription('Start an 8-stage Cyber Hunt challenge (2-hour limit)!'))
+                .setDescription('Start an 8-stage Cyber Hunt challenge (1-hour 35 mins limit)!'))
         .addSubcommand(subcommand =>
             subcommand
                 .setName('arcanelb')
@@ -222,7 +222,7 @@ export default {
         let sessionScore = 0;
         let lastQuestionMessage = null;
 
-        const OVERALL_TIME_LIMIT_MS = 2 * 60 * 60 * 1000; 
+        const OVERALL_TIME_LIMIT_MS = (1 * 60 * 60 * 1000) + (35 * 60 * 1000); 
         const startTime = Date.now();
 
         const runStage = async function() {
@@ -331,7 +331,7 @@ export default {
 
             lastQuestionMessage = message;
 
-            const collectorTimeout = Math.min(remainingTime, 7200000);
+            const collectorTimeout = Math.min(remainingTime, 5700000);
             const buttonCollector = message.createMessageComponentCollector({ time: collectorTimeout });
 
             buttonCollector.on('collect', async function(i) {
@@ -397,7 +397,7 @@ export default {
             messageCollector.on('end', function(collected, reason) {
                 if (reason === 'time' && (Date.now() - startTime >= OVERALL_TIME_LIMIT_MS)) {
                     activeGames.delete(userId);
-                    interaction.channel.send('⏳ The 2-hour overall time limit for ' + String.fromCharCode(60) + '@' + userId + String.fromCharCode(62) + '\'s Cyber Hunt has expired!');
+                    interaction.channel.send('⏳ The 1 Hour 35 Minutes overall time limit for ' + String.fromCharCode(60) + '@' + userId + String.fromCharCode(62) + '\'s Cyber Hunt has expired!');
                 }
             });
         };
