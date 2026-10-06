@@ -259,7 +259,7 @@ export default {
                 activeGames.delete(userId);
 
                 const timeoutEmbed = new EmbedBuilder()
-                    .setTitle('⏳ 2-Hour Cyber Hunt Limit Expired!')
+                    .setTitle('⏳ 1-Hour 35 mins Cyber Hunt Limit Expired!')
                     .setDescription('Time has run out for this hunt! You reached **Stage ' + (stageIndex + 1) + '/' + questions.length + '**.')
                     .setColor('#ED4245')
                     .addFields(
@@ -294,7 +294,7 @@ export default {
                         { name: 'Reward if Solved Now', value: '**' + currentPoints + ' pts**', inline: true },
                         { name: 'Riddle / Task', value: '> ' + challenge.question }
                     )
-                    .setFooter({ text: 'Type your answer in this channel! Overall time limit: 2 hours.' });
+                    .setFooter({ text: 'Type your answer in this channel! Overall time limit: 1 hour 35 mins.' });
 
                 if (hintsRevealed > 0) {
                     const revealedList = challenge.hints.slice(0, hintsRevealed).map(function(h) { return '💡 ' + h; }).join('\n');
